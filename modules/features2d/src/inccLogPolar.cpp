@@ -9,7 +9,9 @@
 #include "boost/optional/optional.hpp"
 #include <boost/foreach.hpp>
 #include <cmath>
+#include <map>
 
+using namespace std;
 using namespace boost;
 
 ///////////////////////////////////////////////////////////
@@ -164,11 +166,10 @@ int sampleSubPixelGray(const Mat& image, double x, double y) {
  * Get the pixel sampling point for a given KeyPoint at a given scale
  * and angle.
  */
-Point2f samplePoint(const double samplingRadius,
-                    const int numAngles,
+Point2f samplePoint(const double samplingRadius, const int numAngles,
                     const double realScaleFactorX,
-                    const double realScaleFactorY,
-                    const int angleIndex, const Point2f& keyPoint) {
+                    const double realScaleFactorY, const int angleIndex,
+                    const Point2f& keyPoint) {
   // Determines the place of the keypoint in the scaled image.
   const double scaledX = realScaleFactorX * keyPoint.x;
   const double scaledY = realScaleFactorY * keyPoint.y;
@@ -259,5 +260,77 @@ vector<Mat> rawLogPolarSeq(bool normalizeScale, double minRadius,
 }
   return out;
 }
+
+/**
+ * The two values that characterize a 1D affine function.
+ */
+struct AffinePair {
+  const double scale;
+  const double offset;
+
+  AffinePair(const double scale_, const double offset_)
+      : scale(scale_),
+        offset(offset_) {
+  }
+};
+
+/**
+ * Data needed to determine normalized dot product from dot product
+ * of unnormalized vectors.
+ */
+struct NormalizationData {
+  const AffinePair affinePair;
+  // This is the sum of the elements of the normalized vector.
+  const double elementSum;
+  const int size;
+
+  NormalizationData(const AffinePair& affinePair_, const double elementSum_,
+                    const int size_)
+      : affinePair(affinePair_),
+        elementSum(elementSum_),
+        size(size_) {
+  }
+};
+
+/**
+ * A mapping from scale levels. Scale levels must be a sequential and
+ * symmetric about zero.
+ */
+template<class A>
+struct ScaleMap {
+  const map<int, A> data;
+
+  ScaleMap(const map<int, A>& data_)
+      : data(data_) {
+    vector<int> keys;
+    // BOOST_FOREACH can't handle this.
+    for (const pair<int, A> keyValue = data.begin(); keyValue != data.end();
+        ++keyValue) {
+      keys.push_back(keyValue.first);
+    }
+
+    // Now keys is sorted.
+    sort(keys.begin(), keys.end());
+    const int minKey = keys.at(0);
+    const int maxKey = keys.at(keys.size() - 1);
+
+    assert(-minKey == maxKey);
+    for (int index = 0; index < keys.size(); ++index) {
+      assert(keys.at(index) == index + minKey);
+    }
+  }
+};
+
+struct NCCBlock {
+  const Mat fourierData;
+  const ScaleMap<NormalizationData> scaleMap;
+
+  NCCBlock(const Mat& fourierData_,
+           const ScaleMap<NormalizationData>& scaleMap_)
+      : fourierData(fourierData_),
+        scaleMap(scaleMap_) {
+    assert(fourierData.rows - 1 == scaleMap.data.size());
+  }
+};
 
 }
