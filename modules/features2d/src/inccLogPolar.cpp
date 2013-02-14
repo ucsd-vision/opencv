@@ -10,6 +10,7 @@
 #include <boost/foreach.hpp>
 #include <cmath>
 #include <map>
+#include "kiss_fftndr.h"
 
 using namespace std;
 using namespace boost;
@@ -311,8 +312,8 @@ struct ScaleMap {
 
     // BOOST_FOREACH can't handle this.
     // "typename" added as magic at compiler's suggestion.
-    for (typename map<int, A>::const_iterator keyValue = data.begin(); keyValue != data.end();
-        ++keyValue) {
+    for (typename map<int, A>::const_iterator keyValue = data.begin();
+        keyValue != data.end(); ++keyValue) {
       keys.push_back(keyValue->first);
     }
 
@@ -360,6 +361,7 @@ bool isPowerOfTwo(const int x) {
  * Find the affine pair that normalizes this matrix.
  */
 AffinePair getAffinePair(const Mat& descriptor) {
+  assert(descriptor.type() == CV_8UC1);
   assert(descriptor.total() > 1);
 
   const double offset = mean(descriptor).val[0];
@@ -380,6 +382,7 @@ Mat normalizeL2(const Mat& descriptor) {
  * Get the normalization data for a matrix.
  */
 NormalizationData getNormalizationData(const Mat& descriptor) {
+  assert(descriptor.type() == CV_8UC1);
   return NormalizationData(getAffinePair(descriptor),
                            sum(normalizeL2(descriptor)).val[0],
                            descriptor.total());
@@ -389,6 +392,8 @@ NormalizationData getNormalizationData(const Mat& descriptor) {
  * Get the scale map for an entire log-polar pattern.
  */
 ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
+  assert(descriptor.type() == CV_8UC1);
+
   assert(descriptor.rows > 0);
   assert(descriptor.cols > 1);
 
@@ -411,6 +416,115 @@ ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
 
   return ScaleMap<NormalizationData>(data);
 }
+
+/**
+ * Convert a Mat of type uint8_t to type int16_t.
+ */
+Mat uint8ToInt16(const Mat& in) {
+  assert(in.type() == CV_8UC1);
+
+  Mat out(in.rows, in.cols, CV_16SC1);
+  for (int row = 0; row < in.rows; ++row) {
+    for (int col = 0; col < in.cols; ++col) {
+      out.at<int16_t>(row, col) = in.at<uint8_t>(row, col);
+    }
+  }
+  return out;
+}
+
+/**
+ * A function used for debugging.
+ *
+ * This cannot be active at the same time as fft2DInteger, because
+ * they depend on different settings of kiss_fft_scalar.
+ */
+Mat fft2DDouble(const Mat& spatialData) {
+  assert(spatialData.type() == CV_64FC1);
+  assert(spatialData.channels() == 1);
+  // This part isn't strictly necessary for FFT, but it is for
+  // INCCLogPolar.
+  assert(spatialData.rows > 1 && isPowerOfTwo(spatialData.rows));
+  assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
+
+  const int dims[2] = { spatialData.rows, spatialData.cols };
+  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, 2, false, NULL, NULL);
+
+  // The Fourier representation is double wide to hold complex values.
+  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
+  kiss_fftndr(config, reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
+              reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
+  free(config);
+  return fourierData;
+}
+
+///**
+// * Performs 2D FFT on an integer Mat, returning an integer Mat.
+// * The returned Mat has the same type as the input, the same number of rows,
+// * but twice the number of columns. This is because each complex value is
+// * reprsented as two adjacent ints. For example, the memory might look like:
+// * [real_0, imag_0, real_1, imag_1, ...].
+// */
+//Mat fft2DInteger(const Mat& spatialData) {
+//  assert(spatialData.type() == CV_16SC1);
+//  assert(spatialData.channels() == 1);
+//  // This part isn't strictly necessary for FFT, but it is for
+//  // INCCLogPolar.
+//  assert(spatialData.rows > 1 && isPowerOfTwo(spatialData.rows));
+//  assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
+//
+//  const int dims[2] = { spatialData.rows, spatialData.cols };
+//  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, 2, false, NULL, NULL);
+//
+//  // The Fourier representation is double wide to hold complex values.
+//  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
+//  kiss_fftndr(config, reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
+//              reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
+//  free(config);
+//  return fourierData;
+//}
+
+//Mat ifft2DInteger(const Mat& fourierData) {
+//  assert(fourierData.type() == CV_16SC1);
+//  assert(fourierData.channels() == 1);
+//  // This part isn't strictly necessary for FFT, but it is for
+//  // INCCLogPolar.
+//  assert(fourierData.rows > 1 && isPowerOfTwo(fourierData.rows));
+//  assert(fourierData.cols > 1 && isPowerOfTwo(fourierData.cols));
+//
+//  const int dims[2] = { fourierData.rows, fourierData.cols };
+//  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, 2, false, NULL, NULL);
+//
+//  // The Fourier representation is double wide to hold complex values.
+//  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
+//  kiss_fftndr(config, reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
+//              reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
+//  return fourierData;
+//}
+
+///**
+// * Get a descriptor from an entire log-polar pattern.
+// */
+//INCCBlock getNCCBlock(const Mat& samples) {
+//  assert(samples.type() == CV_8UC1);
+//
+//  // We require the descriptor width and height each be a power of two.
+//  assert(isPowerOfTwo(samples.rows));
+//  assert(samples.cols > 1 && isPowerOfTwo(samples.cols));
+//
+//  const ScaleMap<NormalizationData> scaleMap = getScaleMap(samples);
+//
+//  val fourierData = {
+//    val zeroPadding = DenseMatrix.zeros[Int](
+//      samples.rows,
+//      samples.cols)
+//
+//    val padded = DenseMatrix.vertcat(samples, zeroPadding)
+//
+//    FFT.fft2(padded mapValues (r => Complex(r, 0)))
+//  }
+//
+//  NCCBlock(fourierData, scaleMap)
+//}
 
 /**
  * The extractor.
