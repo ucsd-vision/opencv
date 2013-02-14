@@ -190,8 +190,8 @@ Point2f samplePoint(const double samplingRadius, const int numAngles,
  * It may fail to extract keypoints near borders.
  */
 vector<optional<Mat> > rawLogPolarSeqInternal(
-    bool normalizeScale, double minRadius, double maxRadius, int numScales,
-    int numAngles, double blurWidth, const Mat& image,
+    const double minRadius, const double maxRadius, const int numScales,
+    const int numAngles, const double blurWidth, const Mat& image,
     const vector<KeyPoint>& keyPoints) {
   // The larger this number, the more accurate the sampling
   // but the larger the largest resized image.
@@ -245,13 +245,17 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
   return descriptors;
 }
 
-vector<Mat> rawLogPolarSeq(bool normalizeScale, double minRadius,
-                           double maxRadius, int numScales, int numAngles,
-                           double blurWidth, const Mat& image,
+vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
+                           const int numScales, const int numAngles,
+                           const double blurWidth, const Mat& image,
                            const vector<KeyPoint>& keyPoints) {
-  const vector<optional<Mat> > matOptions = rawLogPolarSeqInternal(
-      normalizeScale, minRadius, maxRadius, numScales, numAngles, blurWidth,
-      image, keyPoints);
+  const vector<optional<Mat> > matOptions = rawLogPolarSeqInternal(minRadius,
+                                                                   maxRadius,
+                                                                   numScales,
+                                                                   numAngles,
+                                                                   blurWidth,
+                                                                   image,
+                                                                   keyPoints);
 
   vector<Mat> out;
   BOOST_FOREACH(const optional<Mat> matOption, matOptions){
@@ -265,8 +269,9 @@ vector<Mat> rawLogPolarSeq(bool normalizeScale, double minRadius,
  * The two values that characterize a 1D affine function.
  */
 struct AffinePair {
-  const double scale;
-  const double offset;
+  // Stupid fucking assignment operator. How do I make this const?
+  double scale;
+  double offset;
 
   AffinePair(const double scale_, const double offset_)
       : scale(scale_),
@@ -279,10 +284,10 @@ struct AffinePair {
  * of unnormalized vectors.
  */
 struct NormalizationData {
-  const AffinePair affinePair;
+  AffinePair affinePair;
   // This is the sum of the elements of the normalized vector.
-  const double elementSum;
-  const int size;
+  double elementSum;
+  int size;
 
   NormalizationData(const AffinePair& affinePair_, const double elementSum_,
                     const int size_)
@@ -303,10 +308,12 @@ struct ScaleMap {
   ScaleMap(const map<int, A>& data_)
       : data(data_) {
     vector<int> keys;
+
     // BOOST_FOREACH can't handle this.
-    for (const pair<int, A> keyValue = data.begin(); keyValue != data.end();
+    // "typename" added as magic at compiler's suggestion.
+    for (typename map<int, A>::const_iterator keyValue = data.begin(); keyValue != data.end();
         ++keyValue) {
-      keys.push_back(keyValue.first);
+      keys.push_back(keyValue->first);
     }
 
     // Now keys is sorted.
@@ -321,15 +328,112 @@ struct ScaleMap {
   }
 };
 
-struct NCCBlock {
+/**
+ * The descriptor. Contains a Fourier-space version of the log polar
+ * data as well as normalization data for each scale.
+ */
+struct INCCBlock {
   const Mat fourierData;
   const ScaleMap<NormalizationData> scaleMap;
 
-  NCCBlock(const Mat& fourierData_,
-           const ScaleMap<NormalizationData>& scaleMap_)
+  INCCBlock(const Mat& fourierData_,
+            const ScaleMap<NormalizationData>& scaleMap_)
       : fourierData(fourierData_),
         scaleMap(scaleMap_) {
     assert(fourierData.rows - 1 == scaleMap.data.size());
+  }
+};
+
+/**
+ * Only nonnegative powers of 2.
+ */
+bool isPowerOfTwo(const int x) {
+  if (x < 1)
+    return false;
+  else if (x == 1)
+    return true;
+  else
+    return x % 2 == 0 && isPowerOfTwo(x / 2);
+}
+
+/**
+ * Find the affine pair that normalizes this matrix.
+ */
+AffinePair getAffinePair(const Mat& descriptor) {
+  assert(descriptor.total() > 1);
+
+  const double offset = mean(descriptor).val[0];
+  const double scale = norm(descriptor - offset);
+  assert(scale > 0);
+  return AffinePair(scale, offset);
+}
+
+/**
+ * Normalize descriptor to have zero mean and unit norm.
+ */
+Mat normalizeL2(const Mat& descriptor) {
+  const AffinePair affinePair = getAffinePair(descriptor);
+  return (descriptor - affinePair.offset) / affinePair.scale;
+}
+
+/**
+ * Get the normalization data for a matrix.
+ */
+NormalizationData getNormalizationData(const Mat& descriptor) {
+  return NormalizationData(getAffinePair(descriptor),
+                           sum(normalizeL2(descriptor)).val[0],
+                           descriptor.total());
+}
+
+/**
+ * Get the scale map for an entire log-polar pattern.
+ */
+ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
+  assert(descriptor.rows > 0);
+  assert(descriptor.cols > 1);
+
+  const int numScales = descriptor.rows;
+
+  map<int, NormalizationData> data;
+  for (int scaleOffset = -numScales + 1; scaleOffset <= numScales - 1;
+      ++scaleOffset) {
+    const int start = max(scaleOffset, 0);
+    const int stop = min(numScales, scaleOffset + numScales);
+
+    const Mat roi = descriptor(Range(start, stop), Range::all());
+    assert(roi.rows == stop - start);
+    assert(roi.cols == descriptor.cols);
+
+    getNormalizationData(roi);
+
+    data.at(scaleOffset) = getNormalizationData(roi);
+  }
+
+  return ScaleMap<NormalizationData>(data);
+}
+
+/**
+ * The extractor.
+ * numScales and numAngles must be powers of 2.
+ * numAngles must be >= 2.
+ */
+struct INCCLogPolarExtractor {
+  const double minRadius;
+  const double maxRadius;
+  const int numScales;
+  const int numAngles;
+  const double blurWidth;
+
+  INCCLogPolarExtractor(const double minRadius_, const double maxRadius_,
+                        const int numScales_, const int numAngles_,
+                        const double blurWidth_)
+      : minRadius(minRadius_),
+        maxRadius(maxRadius_),
+        numScales(numScales_),
+        numAngles(numAngles_),
+        blurWidth(blurWidth_) {
+    assert(isPowerOfTwo(numScales));
+    assert(numAngles > 1 && isPowerOfTwo(numAngles));
   }
 };
 

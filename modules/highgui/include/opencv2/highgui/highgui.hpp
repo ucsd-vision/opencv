@@ -103,8 +103,8 @@ CV_EXPORTS_W Point2f samplePoint(const double samplingRadius,
                                  const int angleIndex, const Point2f& keyPoint);
 
 CV_EXPORTS_W vector<Mat> rawLogPolarSeq(
-    bool normalizeScale, double minRadius, double maxRadius, int numScales,
-    int numAngles, double blurWidth, const Mat& image,
+    const double minRadius, const double maxRadius, const int numScales,
+    const int numAngles, const double blurWidth, const Mat& image,
     const vector<KeyPoint>& keyPoints);
 /******************************************************************************/
 /******************************************************************************/
