@@ -12,6 +12,13 @@
 #include <map>
 #include "kiss_fftndr.h"
 
+#include "opencv2/highgui/highgui.hpp"
+
+// Enable asserts for this file.
+#undef NDEBUG
+#include <assert.h>
+#define NDEBUG
+
 using namespace std;
 using namespace boost;
 
@@ -22,7 +29,7 @@ namespace cv {
 const double epsilon = 0.00001;
 
 void assertNear(const double left, const double right) {
-  assert(std::abs(left - right) < epsilon);
+  CV_Assert(std::abs(left - right) < epsilon);
 }
 
 /**
@@ -34,16 +41,16 @@ vector<double> getScaleFactors(const double samplingRadius,
                                const int numScales) {
   const double maxScalingFactor = samplingRadius / minRadius;
   const double minScalingFactor = samplingRadius / maxRadius;
-  assert(maxScalingFactor > minScalingFactor);
+  CV_Assert(maxScalingFactor > minScalingFactor);
   const double base = exp(
       log(minScalingFactor / maxScalingFactor) / (numScales - 1));
-  assert(base < 1);
+  CV_Assert(base < 1);
 
   vector<double> scaleFactors;
   for (int scaleIndex = 0; scaleIndex < numScales; ++scaleIndex) {
     const double scaleFactor = maxScalingFactor * pow(base, scaleIndex);
-    assert(scaleFactor >= minScalingFactor - epsilon);
-    assert(scaleFactor <= maxScalingFactor + epsilon);
+    CV_Assert(scaleFactor >= minScalingFactor - epsilon);
+    CV_Assert(scaleFactor <= maxScalingFactor + epsilon);
     if (scaleIndex == 0)
       assertNear(scaleFactor, maxScalingFactor);
     if (scaleIndex == numScales - 1)
@@ -111,7 +118,7 @@ tuple<vector<double>, vector<tuple<double, double> >, vector<Mat> > scaleImage(
 
   const vector<tuple<tuple<int, int>, tuple<double, double> > > scaleSizesAndFactors =
       getRealScaleTargets(idealScaleFactors, blurred.cols, blurred.rows);
-  assert(idealScaleFactors.size() == scaleSizesAndFactors.size());
+  CV_Assert(idealScaleFactors.size() == scaleSizesAndFactors.size());
 
   vector<tuple<double, double> > realScaleFactors;
   vector<Mat> scaledImages;
@@ -142,7 +149,7 @@ vector<Mat> scaleImagesOnly(const double samplingRadius, const double minRadius,
  * Sample a gray pixel from a color image with sub-pixel resolution.
  */
 int sampleSubPixelGray(const Mat& image, double x, double y) {
-  assert(image.channels() == 3);
+  CV_Assert(image.channels() == 3);
 
   Mat pixelPatch;
   // This adjustement is necessary to match the behavior of my Scala reference
@@ -151,9 +158,9 @@ int sampleSubPixelGray(const Mat& image, double x, double y) {
   const float adjustedY = y - 0.5;
   getRectSubPix(image, Size(1, 1), Point2f(adjustedX, adjustedY), pixelPatch);
   Mat cloned = pixelPatch.clone();
-  assert(cloned.type() == CV_8UC3);
+  CV_Assert(cloned.type() == CV_8UC3);
   const int numElements = cloned.total();
-  assert(numElements == 3);
+  CV_Assert(numElements == 3);
   const int red = cloned.data[0];
   const int green = cloned.data[1];
   const int blue = cloned.data[2];
@@ -204,7 +211,7 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
                  image);
   const vector<tuple<double, double> >& realScaleFactors = scaleData.get<1>();
   const vector<Mat>& scaledImages = scaleData.get<2>();
-  assert(realScaleFactors.size() == numScales);
+  CV_Assert(realScaleFactors.size() == numScales);
 
   vector<optional<Mat> > descriptors;
   BOOST_FOREACH(const KeyPoint keyPoint, keyPoints){
@@ -267,85 +274,6 @@ vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
 }
 
 /**
- * The two values that characterize a 1D affine function.
- */
-struct AffinePair {
-  // Stupid fucking assignment operator. How do I make this const?
-  double scale;
-  double offset;
-
-  AffinePair(const double scale_, const double offset_)
-      : scale(scale_),
-        offset(offset_) {
-  }
-};
-
-/**
- * Data needed to determine normalized dot product from dot product
- * of unnormalized vectors.
- */
-struct NormalizationData {
-  AffinePair affinePair;
-  // This is the sum of the elements of the normalized vector.
-  double elementSum;
-  int size;
-
-  NormalizationData(const AffinePair& affinePair_, const double elementSum_,
-                    const int size_)
-      : affinePair(affinePair_),
-        elementSum(elementSum_),
-        size(size_) {
-  }
-};
-
-/**
- * A mapping from scale levels. Scale levels must be a sequential and
- * symmetric about zero.
- */
-template<class A>
-struct ScaleMap {
-  const map<int, A> data;
-
-  ScaleMap(const map<int, A>& data_)
-      : data(data_) {
-    vector<int> keys;
-
-    // BOOST_FOREACH can't handle this.
-    // "typename" added as magic at compiler's suggestion.
-    for (typename map<int, A>::const_iterator keyValue = data.begin();
-        keyValue != data.end(); ++keyValue) {
-      keys.push_back(keyValue->first);
-    }
-
-    // Now keys is sorted.
-    sort(keys.begin(), keys.end());
-    const int minKey = keys.at(0);
-    const int maxKey = keys.at(keys.size() - 1);
-
-    assert(-minKey == maxKey);
-    for (int index = 0; index < keys.size(); ++index) {
-      assert(keys.at(index) == index + minKey);
-    }
-  }
-};
-
-/**
- * The descriptor. Contains a Fourier-space version of the log polar
- * data as well as normalization data for each scale.
- */
-struct INCCBlock {
-  const Mat fourierData;
-  const ScaleMap<NormalizationData> scaleMap;
-
-  INCCBlock(const Mat& fourierData_,
-            const ScaleMap<NormalizationData>& scaleMap_)
-      : fourierData(fourierData_),
-        scaleMap(scaleMap_) {
-    assert(fourierData.rows - 1 == scaleMap.data.size());
-  }
-};
-
-/**
  * Only nonnegative powers of 2.
  */
 bool isPowerOfTwo(const int x) {
@@ -361,12 +289,12 @@ bool isPowerOfTwo(const int x) {
  * Find the affine pair that normalizes this matrix.
  */
 AffinePair getAffinePair(const Mat& descriptor) {
-  assert(descriptor.type() == CV_8UC1);
-  assert(descriptor.total() > 1);
+  CV_Assert(descriptor.type() == CV_8UC1);
+  CV_Assert(descriptor.total() > 1);
 
   const double offset = mean(descriptor).val[0];
   const double scale = norm(descriptor - offset);
-  assert(scale > 0);
+  CV_Assert(scale > 0);
   return AffinePair(scale, offset);
 }
 
@@ -382,7 +310,7 @@ Mat normalizeL2(const Mat& descriptor) {
  * Get the normalization data for a matrix.
  */
 NormalizationData getNormalizationData(const Mat& descriptor) {
-  assert(descriptor.type() == CV_8UC1);
+  CV_Assert(descriptor.type() == CV_8UC1);
   return NormalizationData(getAffinePair(descriptor),
                            sum(normalizeL2(descriptor)).val[0],
                            descriptor.total());
@@ -392,10 +320,10 @@ NormalizationData getNormalizationData(const Mat& descriptor) {
  * Get the scale map for an entire log-polar pattern.
  */
 ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
-  assert(descriptor.type() == CV_8UC1);
+  CV_Assert(descriptor.type() == CV_8UC1);
 
-  assert(descriptor.rows > 0);
-  assert(descriptor.cols > 1);
+  CV_Assert(descriptor.rows > 0);
+  CV_Assert(descriptor.cols > 1);
 
   const int numScales = descriptor.rows;
 
@@ -406,8 +334,8 @@ ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
     const int stop = min(numScales, scaleOffset + numScales);
 
     const Mat roi = descriptor(Range(start, stop), Range::all());
-    assert(roi.rows == stop - start);
-    assert(roi.cols == descriptor.cols);
+    CV_Assert(roi.rows == stop - start);
+    CV_Assert(roi.cols == descriptor.cols);
 
     getNormalizationData(roi);
 
@@ -417,19 +345,82 @@ ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
   return ScaleMap<NormalizationData>(data);
 }
 
-/**
- * Convert a Mat of type uint8_t to type int16_t.
- */
-Mat uint8ToInt16(const Mat& in) {
-  assert(in.type() == CV_8UC1);
+int matrixIndex(const int cols, const int row, const int col) {
+  return row * cols + col;
+}
 
-  Mat out(in.rows, in.cols, CV_16SC1);
-  for (int row = 0; row < in.rows; ++row) {
-    for (int col = 0; col < in.cols; ++col) {
-      out.at<int16_t>(row, col) = in.at<uint8_t>(row, col);
+kiss_fft_cpx kiss_fft_cpx_alloc(const kiss_fft_scalar r,
+                                const kiss_fft_scalar i) {
+  kiss_fft_cpx out;
+  out.r = r;
+  out.i = i;
+  return out;
+}
+
+void fft2DR(const int rows, const int cols, const kiss_fft_scalar *spatialData,
+            kiss_fft_cpx *fourierData) {
+  const int ndims = 2;
+  const int dims[2] = { rows, cols };
+
+  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, ndims, false, NULL,
+                                                   NULL);
+
+  // The Fourier representation is conjugate symmetric, so kiss_fft only
+  // returns the non-redundant part. Here we add that redundancy back in,
+  // using a bit more memory but making the bookkeeping easier.
+  const int compressedCols = cols / 2 + 1;
+  // The data for a matrix of size rows x compressedCols.
+  vector<kiss_fft_cpx> fourierCompressed(rows * compressedCols);
+  kiss_fftndr(config, spatialData, fourierCompressed.data());
+  free(config);
+
+  // Now copy the data out of the compressed representation and into the
+  // uncompressed representation.
+  for (int row = 0; row < rows; ++row) {
+    for (int compressedCol = 0; compressedCol < compressedCols;
+        ++compressedCol) {
+      const kiss_fft_cpx element = fourierCompressed[matrixIndex(compressedCols,
+                                                                 row,
+                                                                 compressedCol)];
+      // Copy the data on the left side of the matrix.
+      fourierData[matrixIndex(cols, row, compressedCol)] = element;
+
+      // Copy the data on the right side of the matrix. We must first
+      // conjugate it.
+      const kiss_fft_cpx conjugateElement = kiss_fft_cpx_alloc(element.r,
+                                                               -element.i);
+      // This is the symmetry part.
+      const int offset = compressedCols - compressedCol - 1;
+      const int rightCol = compressedCols - 1 + offset;
+      fourierData[matrixIndex(cols, row, rightCol)] = conjugateElement;
     }
   }
-  return out;
+}
+
+void ifft2DR(const int rows, const int cols, const kiss_fft_cpx *fourierData,
+             kiss_fft_scalar *spatialData) {
+  const int ndims = 2;
+  const int dims[2] = { rows, cols };
+
+  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, ndims, true, NULL,
+                                                   NULL);
+
+  // The Fourier representation is conjugate symmetric, so kiss_fft only
+  // returns the non-redundant part. Here we add that redundancy back in,
+  // using a bit more memory but making the bookkeeping easier.
+  const int compressedCols = cols / 2 + 1;
+  // The data for a matrix of size rows x compressedCols.
+  vector<kiss_fft_cpx> fourierCompressed(rows * compressedCols);
+  for (int row = 0; row < rows; ++row) {
+    for (int compressedCol = 0; compressedCol < compressedCols;
+        ++compressedCol) {
+      fourierCompressed[matrixIndex(compressedCols, row, compressedCol)] =
+          fourierData[matrixIndex(cols, row, compressedCol)];
+    }
+  }
+
+  kiss_fftndri(config, fourierCompressed.data(), spatialData);
+  free(config);
 }
 
 /**
@@ -439,116 +430,443 @@ Mat uint8ToInt16(const Mat& in) {
  * they depend on different settings of kiss_fft_scalar.
  */
 Mat fft2DDouble(const Mat& spatialData) {
-  assert(spatialData.type() == CV_64FC1);
-  assert(spatialData.channels() == 1);
+  CV_Assert(spatialData.type() == CV_64FC1);
+  CV_Assert(spatialData.channels() == 1);
   // This part isn't strictly necessary for FFT, but it is for
   // INCCLogPolar.
-  assert(spatialData.rows > 1 && isPowerOfTwo(spatialData.rows));
-  assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
+  CV_Assert(spatialData.rows > 0 && isPowerOfTwo(spatialData.rows));
+  CV_Assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
 
-  const int dims[2] = { spatialData.rows, spatialData.cols };
-  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, 2, false, NULL, NULL);
-
-  // The Fourier representation is double wide to hold complex values.
   Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
-  kiss_fftndr(config, reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
-              reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
-  free(config);
-  return fourierData;
+  fft2DR(spatialData.rows, spatialData.cols,
+         reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
+         reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
+
+  cout << fourierData << endl;
+
+  // This clone appears to be necessary to avoid getting a pointer to
+  // uninitialized data.
+  return fourierData.clone();
 }
 
-///**
-// * Performs 2D FFT on an integer Mat, returning an integer Mat.
-// * The returned Mat has the same type as the input, the same number of rows,
-// * but twice the number of columns. This is because each complex value is
-// * reprsented as two adjacent ints. For example, the memory might look like:
-// * [real_0, imag_0, real_1, imag_1, ...].
-// */
-//Mat fft2DInteger(const Mat& spatialData) {
-//  assert(spatialData.type() == CV_16SC1);
-//  assert(spatialData.channels() == 1);
-//  // This part isn't strictly necessary for FFT, but it is for
-//  // INCCLogPolar.
-//  assert(spatialData.rows > 1 && isPowerOfTwo(spatialData.rows));
-//  assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
-//
-//  const int dims[2] = { spatialData.rows, spatialData.cols };
-//  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, 2, false, NULL, NULL);
-//
-//  // The Fourier representation is double wide to hold complex values.
-//  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
-//  kiss_fftndr(config, reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
-//              reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
-//  free(config);
-//  return fourierData;
-//}
+Mat ifft2DDouble(const Mat& fourierData) {
+  CV_Assert(fourierData.type() == CV_64FC1);
+  CV_Assert(fourierData.channels() == 1);
+  // This part isn't strictly necessary for FFT, but it is for
+  // INCCLogPolar.
+  CV_Assert(fourierData.rows > 0 && isPowerOfTwo(fourierData.rows));
+  CV_Assert(fourierData.cols > 1 && isPowerOfTwo(fourierData.cols));
 
-//Mat ifft2DInteger(const Mat& fourierData) {
-//  assert(fourierData.type() == CV_16SC1);
-//  assert(fourierData.channels() == 1);
-//  // This part isn't strictly necessary for FFT, but it is for
-//  // INCCLogPolar.
-//  assert(fourierData.rows > 1 && isPowerOfTwo(fourierData.rows));
-//  assert(fourierData.cols > 1 && isPowerOfTwo(fourierData.cols));
-//
-//  const int dims[2] = { fourierData.rows, fourierData.cols };
-//  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, 2, false, NULL, NULL);
-//
-//  // The Fourier representation is double wide to hold complex values.
-//  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
-//  kiss_fftndr(config, reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
-//              reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
-//  return fourierData;
-//}
+  Mat spatialData(fourierData.rows, fourierData.cols / 2, fourierData.type());
+  ifft2DR(spatialData.rows, spatialData.cols,
+          reinterpret_cast<kiss_fft_cpx*>(fourierData.data),
+          reinterpret_cast<kiss_fft_scalar*>(spatialData.data));
 
-///**
-// * Get a descriptor from an entire log-polar pattern.
-// */
-//INCCBlock getNCCBlock(const Mat& samples) {
-//  assert(samples.type() == CV_8UC1);
+  // It appears kiss_fft doesn't normalize the fft or ifft.
+  const Mat normalizedSpatialData = spatialData / spatialData.total();
+
+  return normalizedSpatialData.clone();
+}
+
+/**
+ * Performs 2D FFT on an integer Mat, returning an integer Mat.
+ * The returned Mat has the same type as the input, the same number of rows,
+ * but twice the number of columns. This is because each complex value is
+ * reprsented as two adjacent ints. For example, the memory might look like:
+ * [real_0, imag_0, real_1, imag_1, ...].
+ */
+Mat fft2DInteger(const Mat& spatialData) {
+  CV_Assert(spatialData.type() == CV_16SC1);
+  CV_Assert(spatialData.channels() == 1);
+  // This part isn't strictly necessary for FFT, but it is for
+  // INCCLogPolar.
+  CV_Assert(spatialData.rows > 0 && isPowerOfTwo(spatialData.rows));
+  CV_Assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
+
+  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
+  fft2DR(spatialData.rows, spatialData.cols,
+         reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
+         reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
+
+  return fourierData.clone();
+}
+
+Mat ifft2DInteger(const Mat& fourierData) {
+  CV_Assert(fourierData.type() == CV_16SC1);
+  CV_Assert(fourierData.channels() == 1);
+  // This part isn't strictly necessary for FFT, but it is for
+  // INCCLogPolar.
+  CV_Assert(fourierData.rows > 0 && isPowerOfTwo(fourierData.rows));
+  CV_Assert(fourierData.cols > 1 && isPowerOfTwo(fourierData.cols));
+
+  Mat spatialData(fourierData.rows, fourierData.cols / 2, fourierData.type());
+  ifft2DR(spatialData.rows, spatialData.cols,
+          reinterpret_cast<kiss_fft_cpx*>(fourierData.data),
+          reinterpret_cast<kiss_fft_scalar*>(spatialData.data));
+
+  return spatialData.clone();
+}
+
+/**
+ * Get a descriptor from an entire log-polar pattern.
+ */
+NCCBlock getNCCBlock(const Mat& samples) {
+  CV_Assert(samples.type() == CV_8UC1);
+
+  // We require the descriptor width and height each be a power of two.
+  CV_Assert(isPowerOfTwo(samples.rows));
+  CV_Assert(samples.cols > 1 && isPowerOfTwo(samples.cols));
+
+  const ScaleMap<NormalizationData> scaleMap = getScaleMap(samples);
+
+  const Mat zeroPadding = Mat::zeros(samples.rows, samples.cols,
+                                     samples.type());
+  Mat padded;
+  vconcat(samples, zeroPadding, padded);
+  // For now, we're working with floating point values.
+  Mat converted;
+  padded.convertTo(converted, CV_64FC1);
+  const Mat fourierData = fft2DDouble(converted);
+
+  return NCCBlock(fourierData, scaleMap);
+}
+
+/**
+ * Extract descriptors from the given keypoints.
+ */
+vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
+                                            const Mat& image,
+                                            const vector<KeyPoint>& keyPoints) {
+  const vector<optional<Mat> > sampleOptions = rawLogPolarSeqInternal(
+      self.minRadius, self.maxRadius, self.numScales, self.numAngles,
+      self.blurWidth, image, keyPoints);
+
+  vector<optional<NCCBlock> > out;
+  BOOST_FOREACH(const optional<Mat> sampleOption, sampleOptions){
+  if (sampleOption.is_initialized()) {
+    const Mat sample = sampleOption.get();
+    CV_Assert(sample.rows == self.numScales);
+    CV_Assert(sample.cols == self.numAngles);
+    out.push_back(optional<NCCBlock>(getNCCBlock(sample)));
+  } else {
+    out.push_back(optional<NCCBlock>());
+  }
+}
+  return out;
+}
+
+/**
+ * Converts an optional<NCCBlock> to a single-row Mat.
+ */
+Mat nccBlockToMat(const optional<NCCBlock>& blockOption) {
+  // The Mat of all zeros represents "not initialized".
+  Mat out(1, sizeof(NCCBlock), CV_8UC1, Scalar(0));
+
+  if (blockOption.is_initialized()) {
+    NCCBlock* block = const_cast<NCCBlock*>(&blockOption.get());
+    Mat mat(1, sizeof(NCCBlock), CV_8UC1, reinterpret_cast<uint8_t*>(block));
+    out = mat.clone();
+  }
+
+  return out;
+}
+
+/**
+ * Converts several optional<NCCBlock> to a Mat.
+ */
+Mat nccBlocksToMat(const vector<optional<NCCBlock> >& blockOptions) {
+  Mat out(blockOptions.size(), sizeof(NCCBlock), CV_8UC1, Scalar(0));
+
+  for (int row = 0; row < blockOptions.size(); ++row) {
+    out.row(row) = nccBlockToMat(blockOptions.at(row));
+  }
+
+  return out;
+}
+
+/**
+ * Checks whether a Mat represents an initialized optional<NCCBlock>.
+ */
+bool matIsInitializedNCCBlock(const Mat& mat) {
+  const bool sizeAndType = mat.rows
+      == 1&& mat.cols == sizeof(NCCBlock) && mat.type() == CV_8UC1;
+
+  double* min;
+  double* max;
+  minMaxIdx(mat, min, max);
+  const bool allZeros = *min == 0 && *max == 0;
+
+  return sizeAndType && !allZeros;
+}
+
+  /**
+   * Converts a single-row Mat to an optional<NCCBlock>
+   */
+optional<NCCBlock> matToNCCBlock(const Mat& mat) {
+  CV_Assert(mat.rows == 1);
+  CV_Assert(mat.cols == sizeof(NCCBlock));
+  CV_Assert(mat.type() == CV_8UC1);
+
+  optional<NCCBlock> out;
+
+  double* min;
+  double* max;
+  minMaxIdx(mat, min, max);
+  if (*min != 0 || *max != 0) {
+    out = *reinterpret_cast<const NCCBlock*>(&mat.at<uint8_t>(0, 0));
+  }
+
+  return out;
+}
+
+/**
+ * Converts a Mat to several optional<NCCBlock>.
+ */
+vector<optional<NCCBlock> > matToNCCBlocks(const Mat& mat) {
+  vector<optional<NCCBlock> > out;
+  for (int row = 0; row < mat.rows; ++row) {
+    out.push_back(matToNCCBlock(mat.row(row)));
+  }
+  return out;
+}
+
+Mat extract(const double minRadius, const double maxRadius, const int numScales,
+            const int numAngles, const double blurWidth, const Mat& image,
+            const vector<KeyPoint>& keyPoints) {
+  const vector<optional<NCCBlock> > blockOptions = extractInternal(
+      NCCLogPolarExtractor(minRadius, maxRadius, numScales, numAngles,
+                           blurWidth),
+      image, keyPoints);
+  return nccBlocksToMat(blockOptions);
+}
+
+//optional<NCCBlock> extractSingle(const NCCLogPolarExtractor& self,
+//                                 const Mat& image, const KeyPoint& keyPoint) {
+//  vector<KeyPoint> keyPoints;
+//  keyPoints.push_back(keyPoint);
+//  const vector<optional<NCCBlock> > blockOptions = extractInternal(self, image,
+//                                                                   keyPoints);
 //
-//  // We require the descriptor width and height each be a power of two.
-//  assert(isPowerOfTwo(samples.rows));
-//  assert(samples.cols > 1 && isPowerOfTwo(samples.cols));
-//
-//  const ScaleMap<NormalizationData> scaleMap = getScaleMap(samples);
-//
-//  val fourierData = {
-//    val zeroPadding = DenseMatrix.zeros[Int](
-//      samples.rows,
-//      samples.cols)
-//
-//    val padded = DenseMatrix.vertcat(samples, zeroPadding)
-//
-//    FFT.fft2(padded mapValues (r => Complex(r, 0)))
-//  }
-//
-//  NCCBlock(fourierData, scaleMap)
+//  return blockOptions.at(0);
 //}
 
 /**
- * The extractor.
- * numScales and numAngles must be powers of 2.
- * numAngles must be >= 2.
+ * Determine what the dot product would have been had the vectors been
+ * normalized first.
  */
-struct INCCLogPolarExtractor {
-  const double minRadius;
-  const double maxRadius;
-  const int numScales;
-  const int numAngles;
-  const double blurWidth;
+double nccFromUnnormalized(const NormalizationData& leftData,
+                           const NormalizationData& rightData,
+                           const double unnormalizedInnerProduct) {
+  CV_Assert(leftData.size == rightData.size);
 
-  INCCLogPolarExtractor(const double minRadius_, const double maxRadius_,
-                        const int numScales_, const int numAngles_,
-                        const double blurWidth_)
-      : minRadius(minRadius_),
-        maxRadius(maxRadius_),
-        numScales(numScales_),
-        numAngles(numAngles_),
-        blurWidth(blurWidth_) {
-    assert(isPowerOfTwo(numScales));
-    assert(numAngles > 1 && isPowerOfTwo(numAngles));
+  // Suppose we observe the inner product between two vectors
+  // (a_x * x + b_x) and (a_y * y + b_y), where x and y are normalized.
+  // Note (a_x * x + b_x)^T (a_y * y + b_y) is
+  // (a_x * x)^T (a_y * y) + a_y * b_x^T y + a_x * b_y^T x + b_x^T b_y.
+  // Thus we can solve for the normalized dot product:
+  // x^T y = ((a_x * x)^T (a_y * y) - a_y * b_x^T y - a_x * b_y^T x - b_x^T b_y) / (a_x * a_y).
+  const double aybxy = rightData.affinePair.scale * leftData.affinePair.offset
+      * rightData.elementSum;
+
+  const double axbyx = leftData.affinePair.scale * rightData.affinePair.offset
+      * leftData.elementSum;
+
+  const double bxby = leftData.size * leftData.affinePair.offset
+      * rightData.affinePair.offset;
+
+  const double numerator = unnormalizedInnerProduct - aybxy - axbyx - bxby;
+  const double denominator = leftData.affinePair.scale
+      * rightData.affinePair.scale;
+  CV_Assert(denominator != 0);
+
+  const double correlation = numerator / denominator;
+  CV_Assert(correlation <= 1 + epsilon);
+  CV_Assert(correlation >= -1 - epsilon);
+  return correlation;
+}
+
+/**
+ * Performs correlation (not convolution) between two signals, assuming
+ * they were originally purely real and the have already been mapped
+ * into Fourier space.
+ */
+Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
+  CV_Assert(left.type() == CV_64FC1);
+
+  CV_Assert(left.rows == right.rows);
+  CV_Assert(left.cols == right.cols);
+  CV_Assert(left.type() == right.type());
+
+  // The complex conjugate of the left Mat.
+  Mat leftConjugate(left.rows, left.cols, left.type());
+  for (int row = 0; row < left.rows; ++row) {
+    // The input matrices store complex values, with the odd number indices
+    // storing the imaginary parts. So we start at 1 and stride through by 2.
+    for (int col = 1; col < left.cols; col += 2) {
+      leftConjugate.at<double>(row, col) = -left.at<double>(row, col);
+    }
   }
-};
+
+  // Now we do a pairwise multiplication of complex values.
+  Mat dotTimes;
+  for (int row = 0; row < left.rows; ++row) {
+    for (int col = 0; col < left.cols; col += 2) {
+      const double leftReal = left.at<double>(row, col);
+      const double leftImaginary = left.at<double>(row, col + 1);
+      const double rightReal = right.at<double>(row, col);
+      const double rightImaginary = right.at<double>(row, col + 1);
+
+      const double productReal = leftReal * rightReal
+          - leftImaginary * rightImaginary;
+      const double productImaginary = leftReal * rightImaginary
+          + leftImaginary * rightReal;
+      dotTimes.at<double>(row, col) = productReal;
+      dotTimes.at<double>(row, col + 1) = productImaginary;
+    }
+  }
+
+  return ifft2DDouble(dotTimes);
+}
+
+/**
+ * The correct implementation of a % b.
+ */
+int mod(const int a, const int b) {
+  if (a >= 0)
+    return a % b;
+  else
+    return (b + (a % b)) % b;
+}
+
+/**
+ * The map of normalized correlations.
+ */
+Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
+                   const NCCBlock& rightBlock) {
+  CV_Assert(leftBlock.fourierData.rows == rightBlock.fourierData.rows);
+  CV_Assert(leftBlock.fourierData.cols == rightBlock.fourierData.cols);
+  CV_Assert(scaleSearchRadius < leftBlock.fourierData.rows);
+
+  // This is real valued.
+  const Mat correlation = correlationFromPreprocessed(rightBlock.fourierData,
+                                                      leftBlock.fourierData);
+
+  Mat normalized(correlation);
+  for (int scaleOffset = -scaleSearchRadius; scaleOffset <= scaleSearchRadius;
+      ++scaleOffset) {
+    const int rowIndex = mod(scaleOffset, leftBlock.fourierData.rows);
+    for (int col = 0; col < correlation.cols; ++col) {
+      const double dotProduct = correlation.at<double>(rowIndex, col);
+      const double normalized = nccFromUnnormalized(
+          leftBlock.scaleMap.data.at(scaleOffset),
+          rightBlock.scaleMap.data.at(-scaleOffset), dotProduct);
+    }
+  }
+  return normalized;
+}
+
+/**
+ * Assuming the dot product is between two unit length vectors, find
+ * their l2 distance.
+ * Divides by sqrt(2) to undo a previous normalization.
+ */
+double dotProductToL2Distance(const double dotProduct) {
+  return sqrt(2 - 2 * dotProduct) / sqrt(2);
+}
+
+/**
+ * The map of distances.
+ */
+Mat responseMapToDistanceMap(const Mat& responseMap) {
+  CV_Assert(responseMap.type() == CV_64FC1);
+
+  Mat distances(responseMap.size(), responseMap.type());
+
+  MatConstIterator_<double> response = responseMap.begin<double>();
+  MatIterator_<double> distance = distances.begin<double>();
+  for (; response != responseMap.end<double>(); ++response, ++distance) {
+    *distance = dotProductToL2Distance(*response);
+  }
+  return distances;
+}
+
+Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
+                   const NCCBlock& right) {
+  const Mat responseMap = getResponseMap(self.scaleSearchRadius, left, right);
+  return responseMapToDistanceMap(responseMap);
+}
+
+/**
+ * The distance between two descriptors.
+ */
+double distanceInternal(const NCCLogPolarMatcher& self, const NCCBlock& left,
+                        const NCCBlock& right) {
+  const Mat distanceMap = getDistanceMap(self, left, right);
+  return *min_element(distanceMap.begin<double>(), distanceMap.end<double>());
+}
+
+//double distance(const int scaleSearchRadius, const Mat& leftBlock,
+//                const Mat& rightBlock) {
+//  return distanceInternal(NCCLogPolarMatcher(scaleSearchRadius),
+//                          matToNCCBlock(leftBlock).get(),
+//                          matToNCCBlock(rightBlock).get());
+//}
+
+/**
+ * Match all descriptors on the left to all descriptors on the right,
+ * return distances in a Mat where row indexes left and col indexes right.
+ * Distances are -1 where invalid.
+ * If the distance is symmetric, there is redundancy across the diagonal.
+ */
+Mat matchAllPairs(const int scaleSearchRadius, const Mat& leftBlocks,
+                  const Mat& rightBlocks) {
+  const NCCLogPolarMatcher matcher(scaleSearchRadius);
+
+  const vector<optional<NCCBlock> > lefts = matToNCCBlocks(leftBlocks);
+  const vector<optional<NCCBlock> > rights = matToNCCBlocks(rightBlocks);
+
+  Mat distances(leftBlocks.rows, rightBlocks.cols, CV_64FC1, Scalar(-1));
+  for (int row = 0; row < distances.rows; ++row) {
+    for (int col = 0; col < distances.cols; ++col) {
+      const optional<NCCBlock>& left = lefts.at(row);
+      const optional<NCCBlock>& right = rights.at(col);
+
+      if (left.is_initialized() && right.is_initialized()) {
+        distances.at<double>(row, col) = distanceInternal(matcher, left.get(),
+                                                          right.get());
+      }
+    }
+  }
+  return distances;
+}
+
+///**
+// * For debugging.
+// */
+//Mat distanceMapBetweenKeyPoints(const double minRadius, const double maxRadius,
+//                                const int numScales, const int numAngles,
+//                                const double blurWidth,
+//                                const int scaleSearchRadius, const Mat& image,
+//                                const KeyPoint& left, const KeyPoint& right) {
+//  const NCCLogPolarExtractor extractor(minRadius, maxRadius, numScales,
+//                                       numAngles, blurWidth);
+//
+//  const optional<NCCBlock> leftDescriptorOption = extractSingle(extractor,
+//                                                                image, left);
+//  const optional<NCCBlock> rightDescriptorOption = extractSingle(extractor,
+//                                                                 image, right);
+//
+//  if (!leftDescriptorOption.is_initialized()
+//      || !rightDescriptorOption.is_initialized()) {
+//    return Mat();
+//  } else {
+//    const NCCBlock leftDescriptor = leftDescriptorOption.get();
+//    const NCCBlock rightDescriptor = rightDescriptorOption.get();
+//
+//    const NCCLogPolarMatcher matcher(scaleSearchRadius);
+//
+//    return getDistanceMap(matcher, leftDescriptor, rightDescriptor);
+//  }
+//}
 
 }

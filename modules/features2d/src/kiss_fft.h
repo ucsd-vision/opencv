@@ -50,6 +50,15 @@ extern "C" {
 # endif
 #endif
 
+//struct kiss_fft_cpx {
+//  kiss_fft_scalar r;kiss_fft_scalar i;
+//
+//  kiss_fft_cpx(const kiss_fft_scalar r_, const kiss_fft_scalar i_)
+//      : r(r_),
+//        i(i_) {
+//  }
+//};
+
 typedef struct {
   kiss_fft_scalar r;kiss_fft_scalar i;
 } kiss_fft_cpx;
