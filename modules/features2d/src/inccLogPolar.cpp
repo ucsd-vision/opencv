@@ -10,6 +10,7 @@
 #include <boost/foreach.hpp>
 #include <cmath>
 #include <map>
+#include <tuple>
 #include "kiss_fftndr.h"
 
 #include "opencv2/highgui/highgui.hpp"
@@ -20,7 +21,8 @@
 #define NDEBUG
 
 using namespace std;
-using namespace boost;
+//using namespace boost;
+using boost::optional;
 
 ///////////////////////////////////////////////////////////
 
@@ -67,7 +69,7 @@ vector<double> getScaleFactors(const double samplingRadius,
  * Returns the realizable (width, height) pairs that most closely match
  * the desired scaling factors.
  */
-vector<tuple<tuple<int, int>, tuple<double, double> > > getRealScaleTargets(
+vector<tuple<tuple<int, int>, tuple<double, double>>> getRealScaleTargets(
     const vector<double>& idealScalingFactors, const int imageWidth,
     const int imageHeight) {
   vector<tuple<tuple<int, int>, tuple<double, double> > > scaleTargets;
@@ -92,10 +94,10 @@ Mat getRealScaleTargetsMat(const vector<double>& idealScalingFactors,
   Mat out(tuples.size(), 4, CV_64FC1);
   for (int row = 0; row < tuples.size(); ++row) {
     const tuple<tuple<int, int>, tuple<double, double> > pair = tuples.at(row);
-    out.at<double>(row, 0) = pair.get<0>().get<0>();
-    out.at<double>(row, 1) = pair.get<0>().get<1>();
-    out.at<double>(row, 2) = pair.get<1>().get<0>();
-    out.at<double>(row, 3) = pair.get<1>().get<1>();
+    out.at<double>(row, 0) = get<0>(get<0>(pair));
+    out.at<double>(row, 1) = get<1>(get<0>(pair));
+    out.at<double>(row, 2) = get<0>(get<1>(pair));
+    out.at<double>(row, 3) = get<1>(get<1>(pair));
   }
   return out;
 }
@@ -123,15 +125,14 @@ tuple<vector<double>, vector<tuple<double, double> >, vector<Mat> > scaleImage(
   vector<tuple<double, double> > realScaleFactors;
   vector<Mat> scaledImages;
   for (int index = 0; index < scaleSizesAndFactors.size(); ++index) {
-    const tuple<double, double> realScaleFactor = scaleSizesAndFactors.at(index)
-        .get<1>();
+    const tuple<double, double> realScaleFactor = get<1>(scaleSizesAndFactors.at(index));
     realScaleFactors.push_back(realScaleFactor);
 
     const tuple<int, int> realScaleSize =
-        scaleSizesAndFactors.at(index).get<0>();
+        get<0>(scaleSizesAndFactors.at(index));
     Mat resized;
     resize(blurred, resized,
-           Size(realScaleSize.get<0>(), realScaleSize.get<1>()), 0, 0,
+           Size(get<0>(realScaleSize), get<1>(realScaleSize)), 0, 0,
            INTER_CUBIC);
     scaledImages.push_back(resized);
   }
@@ -141,8 +142,8 @@ tuple<vector<double>, vector<tuple<double, double> >, vector<Mat> > scaleImage(
 vector<Mat> scaleImagesOnly(const double samplingRadius, const double minRadius,
                             const double maxRadius, const double numScales,
                             const double blurWidth, const Mat& image) {
-  return scaleImage(samplingRadius, minRadius, maxRadius, numScales, blurWidth,
-                    image).get<2>();
+  return get<2>(scaleImage(samplingRadius, minRadius, maxRadius, numScales, blurWidth,
+                    image));
 }
 
 /**
@@ -210,8 +211,8 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
   const tuple<vector<double>, vector<tuple<double, double> >, vector<Mat> > scaleData =
       scaleImage(samplingRadius, minRadius, maxRadius, numScales, blurWidth,
                  image);
-  const vector<tuple<double, double> >& realScaleFactors = scaleData.get<1>();
-  const vector<Mat>& scaledImages = scaleData.get<2>();
+  const vector<tuple<double, double> >& realScaleFactors = get<1>(scaleData);
+  const vector<Mat>& scaledImages = get<2>(scaleData);
   CV_Assert(realScaleFactors.size() == numScales);
 
   vector<optional<Mat> > descriptors;
@@ -219,8 +220,8 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
       keyPoint != keyPoints.end(); ++keyPoint) {
 //  BOOST_FOREACH(const KeyPoint keyPoint, keyPoints){
 
-  const double x = keyPoint->pt.x * realScaleFactors.at(numScales - 1).get<0>();
-  const double y = keyPoint->pt.y * realScaleFactors.at(numScales - 1).get<1>();
+  const double x = keyPoint->pt.x * get<0>(realScaleFactors.at(numScales - 1));
+  const double y = keyPoint->pt.y * get<1>(realScaleFactors.at(numScales - 1));
   const int width = scaledImages.at(numScales - 1).cols;
   const int height = scaledImages.at(numScales - 1).rows;
 
@@ -239,8 +240,8 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
         const Point2f point = samplePoint(
             samplingRadius,
             numAngles,
-            realScaleFactors.at(scaleIndex).get<0>(),
-            realScaleFactors.at(scaleIndex).get<1>(),
+            get<0>(realScaleFactors.at(scaleIndex)),
+            get<1>(realScaleFactors.at(scaleIndex)),
             angleIndex,
             keyPoint->pt);
 
