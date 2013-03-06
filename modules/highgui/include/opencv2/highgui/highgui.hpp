@@ -65,6 +65,7 @@
 #include <cmath>
 
 //using namespace boost;
+using boost::optional;
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
@@ -96,11 +97,19 @@ struct CV_EXPORTS_W AffinePair {
   CV_WRAP double scale;
   CV_WRAP double offset;
 
+  AffinePair() {}
+
   AffinePair(const double scale_, const double offset_)
       : scale(scale_),
         offset(offset_) {
   }
 };
+
+//CV_EXPORTS_W void getAffinePair(AffinePair& pair);
+
+//CV_EXPORTS_W void getAffinePair(Ptr<int> pair);
+
+CV_EXPORTS_W AffinePair* getAffinePair();
 
 /**
  * Data needed to determine normalized dot product from dot product
@@ -111,6 +120,8 @@ struct CV_EXPORTS_W NormalizationData {
   // This is the sum of the elements of the normalized vector.
   CV_WRAP double elementSum;
   CV_WRAP int size;
+
+  NormalizationData() {}
 
   NormalizationData(const AffinePair& affinePair_, const double elementSum_,
                     const int size_)
@@ -127,6 +138,8 @@ struct CV_EXPORTS_W NormalizationData {
 template<class A>
 struct ScaleMap {
   std::map<int, A> data;
+
+  ScaleMap() {}
 
   ScaleMap(const std::map<int, A>& data_)
       : data(data_) {
@@ -159,6 +172,8 @@ struct CV_EXPORTS_W NCCBlock {
   CV_WRAP Mat fourierData;
   CV_WRAP ScaleMap<NormalizationData> scaleMap;
 
+  NCCBlock() {}
+
   NCCBlock(const Mat& fourierData_,
            const ScaleMap<NormalizationData>& scaleMap_)
       : fourierData(fourierData_),
@@ -179,6 +194,8 @@ struct CV_EXPORTS_W NCCLogPolarExtractor {
   CV_WRAP int numAngles;
   CV_WRAP double blurWidth;
 
+  NCCLogPolarExtractor() {}
+
   NCCLogPolarExtractor(const double minRadius_, const double maxRadius_,
                        const int numScales_, const int numAngles_,
                        const double blurWidth_)
@@ -194,6 +211,8 @@ struct CV_EXPORTS_W NCCLogPolarExtractor {
 
 struct CV_EXPORTS_W NCCLogPolarMatcher {
   CV_WRAP int scaleSearchRadius;
+
+  NCCLogPolarMatcher() {}
 
   NCCLogPolarMatcher(const int scaleSearchRadius_)
       : scaleSearchRadius(scaleSearchRadius_) {
@@ -220,6 +239,20 @@ CV_EXPORTS_W Point2f samplePoint(const double samplingRadius,
                                  const double realScaleFactorY,
                                  const int angleIndex, const Point2f& keyPoint);
 
+NormalizationData getNormalizationData(const Mat& descriptor);
+
+//CV_EXPORTS_W NormalizationData* getNormalizationDataPointer(const Mat& descriptor);
+
+CV_EXPORTS_W void* getNormalizationDataVoidPointer(const Mat& descriptor);
+
+ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor);
+
+NCCBlock getNCCBlock(const Mat& samples);
+
+vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
+                                            const Mat& image,
+                                            const vector<KeyPoint>& keyPoints);
+
 CV_EXPORTS_W vector<Mat> rawLogPolarSeq(
     const double minRadius, const double maxRadius, const int numScales,
     const int numAngles, const double blurWidth, const Mat& image,
@@ -237,8 +270,19 @@ CV_EXPORTS_W Mat extract(const double minRadius, const double maxRadius, const i
             const int numAngles, const double blurWidth, const Mat& image,
             const vector<KeyPoint>& keyPoints);
 
+Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
+                   const NCCBlock& rightBlock);
+
+Mat responseMapToDistanceMap(const Mat& responseMap);
+
+Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
+                   const NCCBlock& right);
+
 CV_EXPORTS_W Mat matchAllPairs(const int scaleSearchRadius, const Mat& leftBlocks,
                   const Mat& rightBlocks);
+
+double distanceInternal(const NCCLogPolarMatcher& self, const NCCBlock& left,
+                        const NCCBlock& right);
 
 //CV_EXPORTS_W Mat distanceMapBetweenKeyPoints(const double minRadius, const double maxRadius,
 //                                const int numScales, const int numAngles,

@@ -323,6 +323,14 @@ NormalizationData getNormalizationData(const Mat& descriptor) {
                            descriptor.total());
 }
 
+//NormalizationData* getNormalizationDataPointer(const Mat& descriptor) {
+//  return new NormalizationData(getNormalizationData(descriptor));
+//}
+
+void* getNormalizationDataVoidPointer(const Mat& descriptor) {
+  return new NormalizationData(getNormalizationData(descriptor));
+}
+
 /**
  * Get the scale map for an entire log-polar pattern.
  */
@@ -346,7 +354,7 @@ ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
 
     getNormalizationData(roi);
 
-    data.at(scaleOffset) = getNormalizationData(roi);
+    data[scaleOffset] = getNormalizationData(roi);;
   }
 
   return ScaleMap<NormalizationData>(data);
@@ -567,7 +575,7 @@ vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
       self.blurWidth, image, keyPoints);
   CV_Assert(sampleOptions.size() == keyPoints.size());
 
-  cout << "sampleOptions.size " << sampleOptions.size() << endl;
+//  cout << "sampleOptions.size " << sampleOptions.size() << endl;
 
   vector<optional<NCCBlock> > out;
   for (vector<optional<Mat> >::const_iterator sampleOption = sampleOptions.begin();
@@ -584,9 +592,15 @@ vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
 }
 
   CV_Assert(out.size() == keyPoints.size());
-  cout << "out.size " << out.size() << endl;
+//  cout << "out.size " << out.size() << endl;
   return out;
 }
+
+//void getAffinePair(AffinePair& pair) {}
+
+void getAffinePair(Ptr<int> pair) {}
+
+Ptr<int> asdf;
 
 /**
  * Converts an optional<NCCBlock> to a single-row Mat.
@@ -596,10 +610,13 @@ Mat nccBlockToMat(const optional<NCCBlock>& blockOption) {
   Mat out(1, sizeof(NCCBlock), CV_8UC1, Scalar(0));
 
   if (blockOption.is_initialized()) {
+//    cout << "block is initialized" << endl;
     NCCBlock* block = const_cast<NCCBlock*>(&blockOption.get());
     Mat mat(1, sizeof(NCCBlock), CV_8UC1, reinterpret_cast<uint8_t*>(block));
     out = mat.clone();
   }
+
+//  cout << out << endl;
 
   return out;
 }
@@ -672,12 +689,12 @@ Mat extract(const double minRadius, const double maxRadius, const int numScales,
       image, keyPoints);
   CV_Assert(blockOptions.size() == keyPoints.size());
 
-  cout << "blockOptions.size " << blockOptions.size() << endl;
+//  cout << "blockOptions.size " << blockOptions.size() << endl;
   const Mat blockMat = nccBlocksToMat(blockOptions);
   CV_Assert(blockMat.rows == keyPoints.size());
   CV_Assert(blockMat.cols == sizeof(NCCBlock));
-  cout << "blockMat.rows " << blockMat.rows << endl;
-  cout << "blockMat.cols " << blockMat.cols << endl;
+//  cout << "blockMat.rows " << blockMat.rows << endl;
+//  cout << "blockMat.cols " << blockMat.cols << endl;
   return blockMat.clone();
 }
 
@@ -721,6 +738,7 @@ double nccFromUnnormalized(const NormalizationData& leftData,
   CV_Assert(denominator != 0);
 
   const double correlation = numerator / denominator;
+  cout << correlation << endl;
   CV_Assert(correlation <= 1 + epsilon);
   CV_Assert(correlation >= -1 - epsilon);
   return correlation;
@@ -732,39 +750,67 @@ double nccFromUnnormalized(const NormalizationData& leftData,
  * into Fourier space.
  */
 Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
-  CV_Assert(left.type() == CV_64FC1);
+  CV_Assert(left.type() == CV_64FC2);
+  CV_Assert(left.channels() == 2);
 
   CV_Assert(left.rows == right.rows);
   CV_Assert(left.cols == right.cols);
+  CV_Assert(left.channels() == right.channels());
   CV_Assert(left.type() == right.type());
 
-  // The complex conjugate of the left Mat.
-  Mat leftConjugate(left.rows, left.cols, left.type());
-  for (int row = 0; row < left.rows; ++row) {
-    // The input matrices store complex values, with the odd number indices
-    // storing the imaginary parts. So we start at 1 and stride through by 2.
-    for (int col = 1; col < left.cols; col += 2) {
-      leftConjugate.at<double>(row, col) = -left.at<double>(row, col);
-    }
-  }
+  vector<Mat> leftLayers;
+  split(left, leftLayers);
+  CV_Assert(leftLayers.size() == 2);
+  const auto& leftReal = leftLayers.at(0);
+  const auto& leftImaginary = leftLayers.at(1);
 
-  // Now we do a pairwise multiplication of complex values.
+  vector<Mat> rightLayers;
+  split(right, rightLayers);
+  CV_Assert(rightLayers.size() == 2);
+  const auto& rightReal = rightLayers.at(0);
+  const auto& rightImaginary = rightLayers.at(1);
+
+  // Now we do pairwise multiplication of the _conjugate_ of the left
+  // matrix and the right matrix.
+  const auto realPart =
+      leftReal.mul(rightReal) + leftImaginary.mul(rightImaginary);
+  const auto imaginaryPart =
+      leftReal.mul(rightImaginary) - leftImaginary.mul(rightReal);
+
+  vector<Mat> dotTimesLayers = {realPart, imaginaryPart};
   Mat dotTimes;
-  for (int row = 0; row < left.rows; ++row) {
-    for (int col = 0; col < left.cols; col += 2) {
-      const double leftReal = left.at<double>(row, col);
-      const double leftImaginary = left.at<double>(row, col + 1);
-      const double rightReal = right.at<double>(row, col);
-      const double rightImaginary = right.at<double>(row, col + 1);
 
-      const double productReal = leftReal * rightReal
-          - leftImaginary * rightImaginary;
-      const double productImaginary = leftReal * rightImaginary
-          + leftImaginary * rightReal;
-      dotTimes.at<double>(row, col) = productReal;
-      dotTimes.at<double>(row, col + 1) = productImaginary;
-    }
-  }
+
+
+  merge(dotTimesLayers, dotTimes);
+
+//  // The complex conjugate of the left Mat.
+//  Mat leftConjugate(left.rows, left.cols, left.type());
+//  for (int row = 0; row < left.rows; ++row) {
+//    // The input matrices store complex values, with the odd number indices
+//    // storing the imaginary parts. So we start at 1 and stride through by 2.
+//    for (int col = 1; col < left.cols; col += 2) {
+//      leftConjugate.at<double>(row, col) = -left.at<double>(row, col);
+//    }
+//  }
+//
+//  // Now we do a pairwise multiplication of complex values.
+//  Mat dotTimes;
+//  for (int row = 0; row < left.rows; ++row) {
+//    for (int col = 0; col < left.cols; col += 2) {
+//      const double leftReal = left.at<double>(row, col);
+//      const double leftImaginary = left.at<double>(row, col + 1);
+//      const double rightReal = right.at<double>(row, col);
+//      const double rightImaginary = right.at<double>(row, col + 1);
+//
+//      const double productReal = leftReal * rightReal
+//          - leftImaginary * rightImaginary;
+//      const double productImaginary = leftReal * rightImaginary
+//          + leftImaginary * rightReal;
+//      dotTimes.at<double>(row, col) = productReal;
+//      dotTimes.at<double>(row, col + 1) = productImaginary;
+//    }
+//  }
 
   return ifft2DDouble(dotTimes);
 }
@@ -786,23 +832,37 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
                    const NCCBlock& rightBlock) {
   CV_Assert(leftBlock.fourierData.rows == rightBlock.fourierData.rows);
   CV_Assert(leftBlock.fourierData.cols == rightBlock.fourierData.cols);
-  CV_Assert(scaleSearchRadius < leftBlock.fourierData.rows);
+  // The data has been zero padded in the vertical direction, which is
+  // why we're dividing by 2 here.
+  CV_Assert(scaleSearchRadius < leftBlock.fourierData.rows / 2);
+
+  cout << leftBlock.fourierData.rows << endl;
+  cout << leftBlock.fourierData.cols << endl;
+  cout << leftBlock.fourierData.channels() << endl;
 
   // This is real valued.
   const Mat correlation = correlationFromPreprocessed(rightBlock.fourierData,
                                                       leftBlock.fourierData);
+  CV_Assert(correlation.type() == CV_64FC1);
+
+  cout << correlation << endl;
 
   Mat normalized(correlation);
   for (int scaleOffset = -scaleSearchRadius; scaleOffset <= scaleSearchRadius;
       ++scaleOffset) {
     const int rowIndex = mod(scaleOffset, leftBlock.fourierData.rows);
     for (int col = 0; col < correlation.cols; ++col) {
+      cout << scaleOffset << endl;
       const double dotProduct = correlation.at<double>(rowIndex, col);
+      cout << dotProduct << endl;
       const double normalized = nccFromUnnormalized(
           leftBlock.scaleMap.data.at(scaleOffset),
           rightBlock.scaleMap.data.at(-scaleOffset), dotProduct);
     }
   }
+
+  cout << normalized << endl;
+
   return normalized;
 }
 
