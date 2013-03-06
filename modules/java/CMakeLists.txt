@@ -56,6 +56,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
   else()
     set(module_headers "${OPENCV_MODULE_opencv_${module}_HEADERS}")
   endif()
+  message(STATUS "module_headers = ${module_headers}")
   if(module_headers)
     # C headers must go first
     set(module_headers_cpp ${module_headers})

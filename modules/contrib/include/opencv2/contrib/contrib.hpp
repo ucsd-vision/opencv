@@ -969,6 +969,8 @@ namespace cv
 
 #include "opencv2/contrib/openfabmap.hpp"
 
+#include "opencv2/contrib/mtc.hpp"
+
 #endif
 
 #endif

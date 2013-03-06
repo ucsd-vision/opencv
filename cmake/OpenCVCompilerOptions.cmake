@@ -58,6 +58,7 @@ endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
+  add_extra_compiler_option(-std=c++11)  
   add_extra_compiler_option(-W)
   add_extra_compiler_option(-Wall)
   add_extra_compiler_option(-Werror=return-type)
