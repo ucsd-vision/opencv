@@ -16,16 +16,13 @@
 #include <boost/foreach.hpp>
 #include <cmath>
 
+#include "mtcSamplePattern.hpp"
+
 /////////////////////////////////////////////
 
 namespace cv {
 
 using boost::optional;
-
-/**
- * Only nonnegative powers of 2.
- */
-bool isPowerOfTwo(const int x);
 
 /**
  * The two values that characterize a 1D affine function.
@@ -164,37 +161,9 @@ struct CV_EXPORTS_W NCCLogPolarMatcher {
   }
 };
 
-CV_EXPORTS_W vector<double> getScaleFactors(const double samplingRadius,
-                                            const double minRadius,
-                                            const double maxRadius,
-                                            const int numScales);
 
-CV_EXPORTS_W Mat getRealScaleTargetsMat(
-    const vector<double>& idealScalingFactors, const int imageWidth,
-    const int imageHeight);
-
-CV_EXPORTS_W vector<Mat> scaleImagesOnly(const double samplingRadius,
-                                         const double minRadius,
-                                         const double maxRadius,
-                                         const double numScales,
-                                         const double blurWidth,
-                                         const Mat& image);
-
-CV_EXPORTS_W int sampleSubPixelGray(const Mat& image, double x, double y);
-
-CV_EXPORTS_W Point2f samplePoint(const double samplingRadius,
-                                 const int numAngles,
-                                 const double realScaleFactorX,
-                                 const double realScaleFactorY,
-                                 const int angleIndex, const Point2f& keyPoint);
 
 NormalizationData getNormalizationData(const Mat& descriptor);
-
-//CV_EXPORTS_W NormalizationData* getNormalizationDataPointer(const Mat& descriptor);
-
-CV_EXPORTS_W void* getNormalizationDataVoidPointer(const Mat& descriptor);
-
-ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor);
 
 NCCBlock getNCCBlock(const Mat& samples);
 
