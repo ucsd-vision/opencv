@@ -26,9 +26,14 @@ using boost::optional;
  */
 bool isPowerOfTwo(const int x);
 
+double epsilon();
+
 void assertNear(const double left, const double right);
 
-Mat normalizeL2(const Mat& descriptor);
+
+Mat fft2DDouble(const Mat& spatialData);
+
+Mat ifft2DDouble(const Mat& fourierData);
 
 }
 

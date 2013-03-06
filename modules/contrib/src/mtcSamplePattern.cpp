@@ -39,8 +39,8 @@ vector<double> getScaleFactors(const double samplingRadius,
   vector<double> scaleFactors;
   for (int scaleIndex = 0; scaleIndex < numScales; ++scaleIndex) {
     const double scaleFactor = maxScalingFactor * pow(base, scaleIndex);
-    CV_Assert(scaleFactor >= minScalingFactor - epsilon);
-    CV_Assert(scaleFactor <= maxScalingFactor + epsilon);
+    CV_Assert(scaleFactor >= minScalingFactor - epsilon());
+    CV_Assert(scaleFactor <= maxScalingFactor + epsilon());
     if (scaleIndex == 0)
       assertNear(scaleFactor, maxScalingFactor);
     if (scaleIndex == numScales - 1)
@@ -213,10 +213,10 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
   const int width = scaledImages.at(numScales - 1).cols;
   const int height = scaledImages.at(numScales - 1).rows;
 
-  const bool isInsideBounds = x - epsilon > samplingRadius &&
-  x + epsilon + samplingRadius < width &&
-  y - epsilon > samplingRadius &&
-  y + epsilon + samplingRadius < height;
+  const bool isInsideBounds = x - epsilon() > samplingRadius &&
+  x + epsilon() + samplingRadius < width &&
+  y - epsilon() > samplingRadius &&
+  y + epsilon() + samplingRadius < height;
 
   if (!isInsideBounds) {
     descriptors.push_back(optional<Mat>());

@@ -32,7 +32,13 @@ namespace cv {
 
 
 
-
+/**
+ * Normalize descriptor to have zero mean and unit norm.
+ */
+Mat normalizeL2(const Mat& descriptor) {
+  const AffinePair affinePair = getAffinePair(descriptor);
+  return (descriptor - affinePair.offset) / affinePair.scale;
+}
 
 
 
@@ -88,27 +94,7 @@ ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor) {
   return ScaleMap<NormalizationData>(data);
 }
 
-int matrixIndex(const int cols, const int row, const int col) {
-  return row * cols + col;
-}
 
-Mat fft2DDouble(const Mat& spatialData) {
-  CV_Assert(spatialData.type() == CV_64FC1);
-  CV_Assert(spatialData.channels() == 1);
-
-  Mat fourierData;
-  dft(spatialData, fourierData, DFT_COMPLEX_OUTPUT, 0);
-  return fourierData;
-}
-
-Mat ifft2DDouble(const Mat& fourierData) {
-  CV_Assert(fourierData.type() == CV_64FC2);
-  CV_Assert(fourierData.channels() == 2);
-
-  Mat spatialData;
-  idft(fourierData, spatialData, DFT_REAL_OUTPUT | DFT_SCALE, 0);
-  return spatialData;
-}
 
 /**
  * Get a descriptor from an entire log-polar pattern.
@@ -303,8 +289,8 @@ double nccFromUnnormalized(const NormalizationData& leftData,
 
   const double correlation = numerator / denominator;
   cout << correlation << endl;
-  CV_Assert(correlation <= 1 + epsilon);
-  CV_Assert(correlation >= -1 - epsilon);
+  CV_Assert(correlation <= 1 + epsilon());
+  CV_Assert(correlation >= -1 - epsilon());
   return correlation;
 }
 

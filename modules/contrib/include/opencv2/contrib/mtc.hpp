@@ -17,6 +17,7 @@
 #include <cmath>
 
 #include "mtcSamplePattern.hpp"
+#include "mtcUtil.hpp"
 
 /////////////////////////////////////////////
 
@@ -164,6 +165,8 @@ struct CV_EXPORTS_W NCCLogPolarMatcher {
 
 
 NormalizationData getNormalizationData(const Mat& descriptor);
+
+ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor);
 
 NCCBlock getNCCBlock(const Mat& samples);
 

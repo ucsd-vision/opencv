@@ -64,8 +64,16 @@ CV_EXPORTS_W Point2f samplePoint(const double samplingRadius,
                                  const int angleIndex, const Point2f& keyPoint);
 
 
-ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor);
+vector<optional<Mat> > rawLogPolarSeqInternal(
+    const double minRadius, const double maxRadius, const int numScales,
+    const int numAngles, const double blurWidth, const Mat& image,
+    const vector<KeyPoint>& keyPoints);
 
-}
+vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
+                           const int numScales, const int numAngles,
+                           const double blurWidth, const Mat& image,
+                           const vector<KeyPoint>& keyPoints);
+
+} // namespace cv
 
 #endif
