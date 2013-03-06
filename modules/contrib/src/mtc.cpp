@@ -92,125 +92,6 @@ int matrixIndex(const int cols, const int row, const int col) {
   return row * cols + col;
 }
 
-kiss_fft_cpx kiss_fft_cpx_alloc(const kiss_fft_scalar r,
-                                const kiss_fft_scalar i) {
-  kiss_fft_cpx out;
-  out.r = r;
-  out.i = i;
-  return out;
-}
-
-//void fft2DR(const int rows, const int cols, const kiss_fft_scalar *spatialData,
-//            kiss_fft_cpx *fourierData) {
-//  const int ndims = 2;
-//  const int dims[2] = { rows, cols };
-//
-//  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, ndims, false, NULL,
-//                                                   NULL);
-//
-//  // The Fourier representation is conjugate symmetric, so kiss_fft only
-//  // returns the non-redundant part. Here we add that redundancy back in,
-//  // using a bit more memory but making the bookkeeping easier.
-//  const int compressedCols = cols / 2 + 1;
-//  // The data for a matrix of size rows x compressedCols.
-//  vector<kiss_fft_cpx> fourierCompressed(rows * compressedCols);
-//  kiss_fftndr(config, spatialData, fourierCompressed.data());
-//  free(config);
-//
-//  // Now copy the data out of the compressed representation and into the
-//  // uncompressed representation.
-//  for (int row = 0; row < rows; ++row) {
-//    for (int compressedCol = 0; compressedCol < compressedCols;
-//        ++compressedCol) {
-//      const kiss_fft_cpx element = fourierCompressed[matrixIndex(compressedCols,
-//                                                                 row,
-//                                                                 compressedCol)];
-//      // Copy the data on the left side of the matrix.
-//      fourierData[matrixIndex(cols, row, compressedCol)] = element;
-//
-//      // Copy the data on the right side of the matrix. We must first
-//      // conjugate it.
-//      const kiss_fft_cpx conjugateElement = kiss_fft_cpx_alloc(element.r,
-//                                                               -element.i);
-//      // This is the symmetry part.
-//      const int offset = compressedCols - compressedCol - 1;
-//      const int rightCol = compressedCols - 1 + offset;
-//      fourierData[matrixIndex(cols, row, rightCol)] = conjugateElement;
-//    }
-//  }
-//}
-//
-//void ifft2DR(const int rows, const int cols, const kiss_fft_cpx *fourierData,
-//             kiss_fft_scalar *spatialData) {
-//  const int ndims = 2;
-//  const int dims[2] = { rows, cols };
-//
-//  const kiss_fftndr_cfg config = kiss_fftndr_alloc(dims, ndims, true, NULL,
-//                                                   NULL);
-//
-//  // The Fourier representation is conjugate symmetric, so kiss_fft only
-//  // returns the non-redundant part. Here we add that redundancy back in,
-//  // using a bit more memory but making the bookkeeping easier.
-//  const int compressedCols = cols / 2 + 1;
-//  // The data for a matrix of size rows x compressedCols.
-//  vector<kiss_fft_cpx> fourierCompressed(rows * compressedCols);
-//  for (int row = 0; row < rows; ++row) {
-//    for (int compressedCol = 0; compressedCol < compressedCols;
-//        ++compressedCol) {
-//      fourierCompressed[matrixIndex(compressedCols, row, compressedCol)] =
-//          fourierData[matrixIndex(cols, row, compressedCol)];
-//    }
-//  }
-//
-//  kiss_fftndri(config, fourierCompressed.data(), spatialData);
-//  free(config);
-//}
-
-///**
-// * A function used for debugging.
-// *
-// * This cannot be active at the same time as fft2DInteger, because
-// * they depend on different settings of kiss_fft_scalar.
-// */
-//Mat fft2DDouble(const Mat& spatialData) {
-//  CV_Assert(spatialData.type() == CV_64FC1);
-//  CV_Assert(spatialData.channels() == 1);
-//  // This part isn't strictly necessary for FFT, but it is for
-//  // INCCLogPolar.
-//  CV_Assert(spatialData.rows > 0 && isPowerOfTwo(spatialData.rows));
-//  CV_Assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
-//
-//  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
-//  fft2DR(spatialData.rows, spatialData.cols,
-//         reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
-//         reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
-//
-//  cout << fourierData << endl;
-//
-//  // This clone appears to be necessary to avoid getting a pointer to
-//  // uninitialized data.
-//  return fourierData.clone();
-//}
-//
-//Mat ifft2DDouble(const Mat& fourierData) {
-//  CV_Assert(fourierData.type() == CV_64FC1);
-//  CV_Assert(fourierData.channels() == 1);
-//  // This part isn't strictly necessary for FFT, but it is for
-//  // INCCLogPolar.
-//  CV_Assert(fourierData.rows > 0 && isPowerOfTwo(fourierData.rows));
-//  CV_Assert(fourierData.cols > 1 && isPowerOfTwo(fourierData.cols));
-//
-//  Mat spatialData(fourierData.rows, fourierData.cols / 2, fourierData.type());
-//  ifft2DR(spatialData.rows, spatialData.cols,
-//          reinterpret_cast<kiss_fft_cpx*>(fourierData.data),
-//          reinterpret_cast<kiss_fft_scalar*>(spatialData.data));
-//
-//  // It appears kiss_fft doesn't normalize the fft or ifft.
-//  const Mat normalizedSpatialData = spatialData / spatialData.total();
-//
-//  return normalizedSpatialData.clone();
-//}
-
 Mat fft2DDouble(const Mat& spatialData) {
   CV_Assert(spatialData.type() == CV_64FC1);
   CV_Assert(spatialData.channels() == 1);
@@ -228,45 +109,6 @@ Mat ifft2DDouble(const Mat& fourierData) {
   idft(fourierData, spatialData, DFT_REAL_OUTPUT | DFT_SCALE, 0);
   return spatialData;
 }
-
-///**
-// * Performs 2D FFT on an integer Mat, returning an integer Mat.
-// * The returned Mat has the same type as the input, the same number of rows,
-// * but twice the number of columns. This is because each complex value is
-// * reprsented as two adjacent ints. For example, the memory might look like:
-// * [real_0, imag_0, real_1, imag_1, ...].
-// */
-//Mat fft2DInteger(const Mat& spatialData) {
-//  CV_Assert(spatialData.type() == CV_16SC1);
-//  CV_Assert(spatialData.channels() == 1);
-//  // This part isn't strictly necessary for FFT, but it is for
-//  // INCCLogPolar.
-//  CV_Assert(spatialData.rows > 0 && isPowerOfTwo(spatialData.rows));
-//  CV_Assert(spatialData.cols > 1 && isPowerOfTwo(spatialData.cols));
-//
-//  Mat fourierData(spatialData.rows, 2 * spatialData.cols, spatialData.type());
-//  fft2DR(spatialData.rows, spatialData.cols,
-//         reinterpret_cast<kiss_fft_scalar*>(spatialData.data),
-//         reinterpret_cast<kiss_fft_cpx*>(fourierData.data));
-//
-//  return fourierData.clone();
-//}
-//
-//Mat ifft2DInteger(const Mat& fourierData) {
-//  CV_Assert(fourierData.type() == CV_16SC1);
-//  CV_Assert(fourierData.channels() == 1);
-//  // This part isn't strictly necessary for FFT, but it is for
-//  // INCCLogPolar.
-//  CV_Assert(fourierData.rows > 0 && isPowerOfTwo(fourierData.rows));
-//  CV_Assert(fourierData.cols > 1 && isPowerOfTwo(fourierData.cols));
-//
-//  Mat spatialData(fourierData.rows, fourierData.cols / 2, fourierData.type());
-//  ifft2DR(spatialData.rows, spatialData.cols,
-//          reinterpret_cast<kiss_fft_cpx*>(fourierData.data),
-//          reinterpret_cast<kiss_fft_scalar*>(spatialData.data));
-//
-//  return spatialData.clone();
-//}
 
 /**
  * Get a descriptor from an entire log-polar pattern.
@@ -323,12 +165,6 @@ vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
 //  cout << "out.size " << out.size() << endl;
   return out;
 }
-
-//void getAffinePair(AffinePair& pair) {}
-
-void getAffinePair(Ptr<int> pair) {}
-
-Ptr<int> asdf;
 
 /**
  * Converts an optional<NCCBlock> to a single-row Mat.
