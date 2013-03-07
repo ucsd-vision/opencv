@@ -123,7 +123,7 @@ NCCBlock getNCCBlock(const Mat& samples) {
 /**
  * Extract descriptors from the given keypoints.
  */
-vector<Option<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
+vector<Option<NCCBlock> > extract(const NCCLogPolarExtractor& self,
                                             const Mat& image,
                                             const vector<KeyPoint>& keyPoints) {
   const vector<Option<Mat> > sampleOptions = rawLogPolarSeq(
@@ -150,102 +150,6 @@ vector<Option<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
   CV_Assert(out.size() == keyPoints.size());
 //  cout << "out.size " << out.size() << endl;
   return out;
-}
-
-/**
- * Converts an optional<NCCBlock> to a single-row Mat.
- */
-Mat nccBlockToMat(const Option<NCCBlock>& blockOption) {
-  // The Mat of all zeros represents "not initialized".
-  Mat out(1, sizeof(NCCBlock), CV_8UC1, Scalar(0));
-
-  if (isDefined(blockOption)) {
-//    cout << "block is initialized" << endl;
-    NCCBlock* block = const_cast<NCCBlock*>(&get(blockOption));
-    Mat mat(1, sizeof(NCCBlock), CV_8UC1, reinterpret_cast<uint8_t*>(block));
-    out = mat.clone();
-  }
-
-//  cout << out << endl;
-
-  return out;
-}
-
-/**
- * Converts several optional<NCCBlock> to a Mat.
- */
-Mat nccBlocksToMat(const vector<Option<NCCBlock> >& blockOptions) {
-  Mat out(blockOptions.size(), sizeof(NCCBlock), CV_8UC1, Scalar(0));
-
-  for (int row = 0; row < blockOptions.size(); ++row) {
-    out.row(row) = nccBlockToMat(blockOptions.at(row));
-  }
-
-  return out;
-}
-
-/**
- * Checks whether a Mat represents an initialized optional<NCCBlock>.
- */
-bool matIsInitializedNCCBlock(const Mat& mat) {
-  const bool sizeAndType = mat.rows
-      == 1&& mat.cols == sizeof(NCCBlock) && mat.type() == CV_8UC1;
-
-  double* min;
-  double* max;
-  minMaxIdx(mat, min, max);
-  const bool allZeros = *min == 0 && *max == 0;
-
-  return sizeAndType && !allZeros;
-}
-
-  /**
-   * Converts a single-row Mat to an optional<NCCBlock>
-   */
-Option<NCCBlock> matToNCCBlock(const Mat& mat) {
-  CV_Assert(mat.rows == 1);
-  CV_Assert(mat.cols == sizeof(NCCBlock));
-  CV_Assert(mat.type() == CV_8UC1);
-
-  optional<NCCBlock> out;
-
-  double* min;
-  double* max;
-  minMaxIdx(mat, min, max);
-  if (*min != 0 || *max != 0) {
-    out = *reinterpret_cast<const NCCBlock*>(&mat.at<uint8_t>(0, 0));
-  }
-
-  return out;
-}
-
-/**
- * Converts a Mat to several optional<NCCBlock>.
- */
-vector<optional<NCCBlock> > matToNCCBlocks(const Mat& mat) {
-  vector<optional<NCCBlock> > out;
-  for (int row = 0; row < mat.rows; ++row) {
-    out.push_back(matToNCCBlock(mat.row(row)));
-  }
-  return out;
-}
-
-Mat extract(const double minRadius, const double maxRadius, const int numScales,
-            const int numAngles, const double blurWidth, const Mat& image,
-            const vector<KeyPoint>& keyPoints) {
-  const vector<optional<NCCBlock> > blockOptions = extractInternal(
-      NCCLogPolarExtractor(minRadius, maxRadius, numScales, numAngles,
-                           blurWidth),
-      image, keyPoints);
-  CV_Assert(blockOptions.size() == keyPoints.size());
-
-//  cout << "blockOptions.size " << blockOptions.size() << endl;
-  const Mat blockMat = nccBlocksToMat(blockOptions);
-  CV_Assert(blockMat.rows == keyPoints.size());
-  CV_Assert(blockMat.cols == sizeof(NCCBlock));
-//  cout << "blockMat.rows " << blockMat.rows << endl;
-//  cout << "blockMat.cols " << blockMat.cols << endl;
-  return blockMat.clone();
 }
 
 //optional<NCCBlock> extractSingle(const NCCLogPolarExtractor& self,
@@ -366,16 +270,6 @@ Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
 }
 
 /**
- * The correct implementation of a % b.
- */
-int mod(const int a, const int b) {
-  if (a >= 0)
-    return a % b;
-  else
-    return (b + (a % b)) % b;
-}
-
-/**
  * The map of normalized correlations.
  */
 Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
@@ -414,15 +308,6 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
   cout << normalized << endl;
 
   return normalized;
-}
-
-/**
- * Assuming the dot product is between two unit length vectors, find
- * their l2 distance.
- * Divides by sqrt(2) to undo a previous normalization.
- */
-double dotProductToL2Distance(const double dotProduct) {
-  return sqrt(2 - 2 * dotProduct) / sqrt(2);
 }
 
 /**
@@ -473,18 +358,18 @@ Mat matchAllPairs(const int scaleSearchRadius, const Mat& leftBlocks,
                   const Mat& rightBlocks) {
   const NCCLogPolarMatcher matcher(scaleSearchRadius);
 
-  const vector<optional<NCCBlock> > lefts = matToNCCBlocks(leftBlocks);
-  const vector<optional<NCCBlock> > rights = matToNCCBlocks(rightBlocks);
+  const vector<Option<NCCBlock> > lefts = matToNCCBlocks(leftBlocks);
+  const vector<Option<NCCBlock> > rights = matToNCCBlocks(rightBlocks);
 
   Mat distances(leftBlocks.rows, rightBlocks.cols, CV_64FC1, Scalar(-1));
   for (int row = 0; row < distances.rows; ++row) {
     for (int col = 0; col < distances.cols; ++col) {
-      const optional<NCCBlock>& left = lefts.at(row);
-      const optional<NCCBlock>& right = rights.at(col);
+      const Option<NCCBlock>& left = lefts.at(row);
+      const Option<NCCBlock>& right = rights.at(col);
 
-      if (left.is_initialized() && right.is_initialized()) {
-        distances.at<double>(row, col) = distanceInternal(matcher, left.get(),
-                                                          right.get());
+      if (isDefined(left) && isDefined(right)) {
+        distances.at<double>(row, col) = distanceInternal(matcher, get(left),
+                                                          get(right));
       }
     }
   }

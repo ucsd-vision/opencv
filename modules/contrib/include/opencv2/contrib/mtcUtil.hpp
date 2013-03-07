@@ -62,6 +62,8 @@ const A& get(const Option<A>& option) {
  */
 bool isPowerOfTwo(const int x);
 
+int mod(const int a, const int b);
+
 double epsilon();
 
 void assertNear(const double left, const double right);
@@ -69,6 +71,8 @@ void assertNear(const double left, const double right);
 CV_EXPORTS_W Mat fft2DDouble(const Mat& spatialData);
 
 CV_EXPORTS_W Mat ifft2DDouble(const Mat& fourierData);
+
+CV_EXPORTS_W double dotProductToL2Distance(const double dotProduct);
 
 }
 
