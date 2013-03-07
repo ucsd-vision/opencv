@@ -23,22 +23,6 @@ namespace cv {
 
 using namespace std;
 
-///**
-// * Like boost::optional (really, Scala's Option), but with CV_WRAP.
-// * The wrapper doesn't like templates, so you need to call this macro to create
-// * each option type you want to use.
-// */
-//#define CREATE_OPTION_TYPE(type) \
-//  struct CV_EXPORTS_W type ## Option { \
-//    CV_WRAP type value; \
-//    CV_WRAP bool isDefined; \
-//    type ## Option() : isDefined(false) {} \
-//    CV_WRAP type ## Option(const type& value_) : value(value_), isDefined(true) {} \
-//    CV_WRAP const type& get() { CV_Assert(isDefined); return value; } \
-//  }
-//
-
-
 CV_EXPORTS_W vector<double> getScaleFactors(const double samplingRadius,
                                             const double minRadius,
                                             const double maxRadius,
@@ -64,15 +48,15 @@ CV_EXPORTS_W Point2f samplePoint(const double samplingRadius,
                                  const int angleIndex, const Point2f& keyPoint);
 
 
-vector<optional<Mat> > rawLogPolarSeqInternal(
+CV_EXPORTS_W vector<Option<Mat>> rawLogPolarSeq(
     const double minRadius, const double maxRadius, const int numScales,
     const int numAngles, const double blurWidth, const Mat& image,
     const vector<KeyPoint>& keyPoints);
 
-vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
-                           const int numScales, const int numAngles,
-                           const double blurWidth, const Mat& image,
-                           const vector<KeyPoint>& keyPoints);
+//vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
+//                           const int numScales, const int numAngles,
+//                           const double blurWidth, const Mat& image,
+//                           const vector<KeyPoint>& keyPoints);
 
 } // namespace cv
 

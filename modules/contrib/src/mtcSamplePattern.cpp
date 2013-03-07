@@ -20,7 +20,6 @@
 namespace cv {
 
 using namespace std;
-using boost::optional;
 
 /**
  * Get image scaling factors. These are used to create the image pyramid from
@@ -187,7 +186,7 @@ Point2f samplePoint(const double samplingRadius, const int numAngles,
  * by numAngles.
  * It may fail to extract keypoints near borders.
  */
-vector<optional<Mat> > rawLogPolarSeqInternal(
+vector<Option<Mat> > rawLogPolarSeq(
     const double minRadius, const double maxRadius, const int numScales,
     const int numAngles, const double blurWidth, const Mat& image,
     const vector<KeyPoint>& keyPoints) {
@@ -203,7 +202,7 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
   const vector<Mat>& scaledImages = get<2>(scaleData);
   CV_Assert(realScaleFactors.size() == numScales);
 
-  vector<optional<Mat> > descriptors;
+  vector<Option<Mat>> descriptors;
   for (vector<KeyPoint>::const_iterator keyPoint = keyPoints.begin();
       keyPoint != keyPoints.end(); ++keyPoint) {
 //  BOOST_FOREACH(const KeyPoint keyPoint, keyPoints){
@@ -219,7 +218,7 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
   y + epsilon() + samplingRadius < height;
 
   if (!isInsideBounds) {
-    descriptors.push_back(optional<Mat>());
+    descriptors.push_back(None<Mat>());
   } else {
     Mat matrix = Mat::zeros(numScales, numAngles, CV_8UC1);
     for (int scaleIndex = 0; scaleIndex < numScales; ++scaleIndex) {
@@ -238,7 +237,7 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
         matrix.at<uint8_t>(scaleIndex, angleIndex) = pixel;
       }
     }
-    descriptors.push_back(optional<Mat>(matrix));
+    descriptors.push_back(Some<Mat>(matrix));
   }
 }
   CV_Assert(descriptors.size() == keyPoints.size());
@@ -246,26 +245,26 @@ vector<optional<Mat> > rawLogPolarSeqInternal(
   return descriptors;
 }
 
-vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
-                           const int numScales, const int numAngles,
-                           const double blurWidth, const Mat& image,
-                           const vector<KeyPoint>& keyPoints) {
-  const vector<optional<Mat> > matOptions = rawLogPolarSeqInternal(minRadius,
-                                                                   maxRadius,
-                                                                   numScales,
-                                                                   numAngles,
-                                                                   blurWidth,
-                                                                   image,
-                                                                   keyPoints);
-
-  vector<Mat> out;
-  for (vector<optional<Mat> >::const_iterator matOption = matOptions.begin();
-      matOption != matOptions.end(); ++matOption) {
-//  BOOST_FOREACH(const optional<Mat> matOption, matOptions){
-  const Mat mat = matOption->is_initialized() ? matOption->get() : Mat();
-  out.push_back(mat);
-}
-  return out;
-}
+//vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
+//                           const int numScales, const int numAngles,
+//                           const double blurWidth, const Mat& image,
+//                           const vector<KeyPoint>& keyPoints) {
+//  const vector<optional<Mat> > matOptions = rawLogPolarSeqInternal(minRadius,
+//                                                                   maxRadius,
+//                                                                   numScales,
+//                                                                   numAngles,
+//                                                                   blurWidth,
+//                                                                   image,
+//                                                                   keyPoints);
+//
+//  vector<Mat> out;
+//  for (vector<optional<Mat> >::const_iterator matOption = matOptions.begin();
+//      matOption != matOptions.end(); ++matOption) {
+////  BOOST_FOREACH(const optional<Mat> matOption, matOptions){
+//  const Mat mat = matOption->is_initialized() ? matOption->get() : Mat();
+//  out.push_back(mat);
+//}
+//  return out;
+//}
 
 }

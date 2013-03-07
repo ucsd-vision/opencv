@@ -123,27 +123,27 @@ NCCBlock getNCCBlock(const Mat& samples) {
 /**
  * Extract descriptors from the given keypoints.
  */
-vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
+vector<Option<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
                                             const Mat& image,
                                             const vector<KeyPoint>& keyPoints) {
-  const vector<optional<Mat> > sampleOptions = rawLogPolarSeqInternal(
+  const vector<Option<Mat> > sampleOptions = rawLogPolarSeq(
       self.minRadius, self.maxRadius, self.numScales, self.numAngles,
       self.blurWidth, image, keyPoints);
   CV_Assert(sampleOptions.size() == keyPoints.size());
 
 //  cout << "sampleOptions.size " << sampleOptions.size() << endl;
 
-  vector<optional<NCCBlock> > out;
-  for (vector<optional<Mat> >::const_iterator sampleOption = sampleOptions.begin();
+  vector<Option<NCCBlock> > out;
+  for (vector<Option<Mat> >::const_iterator sampleOption = sampleOptions.begin();
        sampleOption != sampleOptions.end(); ++sampleOption) {
 //  BOOST_FOREACH(const optional<Mat> sampleOption, sampleOptions){
-  if (sampleOption->is_initialized()) {
-    const Mat sample = sampleOption->get();
+  if (isDefined(sampleOption)) {
+    const Mat sample = get(sampleOption);
     CV_Assert(sample.rows == self.numScales);
     CV_Assert(sample.cols == self.numAngles);
-    out.push_back(optional<NCCBlock>(getNCCBlock(sample)));
+    out.push_back(Some<NCCBlock>(getNCCBlock(sample)));
   } else {
-    out.push_back(optional<NCCBlock>());
+    out.push_back(None<NCCBlock>());
   }
 }
 
@@ -155,13 +155,13 @@ vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
 /**
  * Converts an optional<NCCBlock> to a single-row Mat.
  */
-Mat nccBlockToMat(const optional<NCCBlock>& blockOption) {
+Mat nccBlockToMat(const Option<NCCBlock>& blockOption) {
   // The Mat of all zeros represents "not initialized".
   Mat out(1, sizeof(NCCBlock), CV_8UC1, Scalar(0));
 
-  if (blockOption.is_initialized()) {
+  if (isDefined(blockOption)) {
 //    cout << "block is initialized" << endl;
-    NCCBlock* block = const_cast<NCCBlock*>(&blockOption.get());
+    NCCBlock* block = const_cast<NCCBlock*>(&get(blockOption));
     Mat mat(1, sizeof(NCCBlock), CV_8UC1, reinterpret_cast<uint8_t*>(block));
     out = mat.clone();
   }
@@ -174,7 +174,7 @@ Mat nccBlockToMat(const optional<NCCBlock>& blockOption) {
 /**
  * Converts several optional<NCCBlock> to a Mat.
  */
-Mat nccBlocksToMat(const vector<optional<NCCBlock> >& blockOptions) {
+Mat nccBlocksToMat(const vector<Option<NCCBlock> >& blockOptions) {
   Mat out(blockOptions.size(), sizeof(NCCBlock), CV_8UC1, Scalar(0));
 
   for (int row = 0; row < blockOptions.size(); ++row) {
@@ -202,7 +202,7 @@ bool matIsInitializedNCCBlock(const Mat& mat) {
   /**
    * Converts a single-row Mat to an optional<NCCBlock>
    */
-optional<NCCBlock> matToNCCBlock(const Mat& mat) {
+Option<NCCBlock> matToNCCBlock(const Mat& mat) {
   CV_Assert(mat.rows == 1);
   CV_Assert(mat.cols == sizeof(NCCBlock));
   CV_Assert(mat.type() == CV_8UC1);

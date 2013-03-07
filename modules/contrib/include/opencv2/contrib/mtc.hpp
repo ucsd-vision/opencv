@@ -18,12 +18,11 @@
 
 #include "mtcSamplePattern.hpp"
 #include "mtcUtil.hpp"
+#include "mtcWrapper.hpp"
 
 /////////////////////////////////////////////
 
 namespace cv {
-
-using boost::optional;
 
 /**
  * The two values that characterize a 1D affine function.
@@ -170,21 +169,9 @@ ScaleMap<NormalizationData> getScaleMap(const Mat& descriptor);
 
 NCCBlock getNCCBlock(const Mat& samples);
 
-vector<optional<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
+vector<Option<NCCBlock> > extractInternal(const NCCLogPolarExtractor& self,
                                             const Mat& image,
                                             const vector<KeyPoint>& keyPoints);
-
-CV_EXPORTS_W vector<Mat> rawLogPolarSeq(const double minRadius,
-                                        const double maxRadius,
-                                        const int numScales,
-                                        const int numAngles,
-                                        const double blurWidth,
-                                        const Mat& image,
-                                        const vector<KeyPoint>& keyPoints);
-
-CV_EXPORTS_W Mat fft2DDouble(const Mat& spatialData);
-
-CV_EXPORTS_W Mat ifft2DDouble(const Mat& fourierData);
 
 //CV_EXPORTS_W Mat fft2DInteger(const Mat& spatialData);
 //
