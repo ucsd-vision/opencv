@@ -245,26 +245,4 @@ vector<Option<Mat> > rawLogPolarSeq(
   return descriptors;
 }
 
-//vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
-//                           const int numScales, const int numAngles,
-//                           const double blurWidth, const Mat& image,
-//                           const vector<KeyPoint>& keyPoints) {
-//  const vector<optional<Mat> > matOptions = rawLogPolarSeqInternal(minRadius,
-//                                                                   maxRadius,
-//                                                                   numScales,
-//                                                                   numAngles,
-//                                                                   blurWidth,
-//                                                                   image,
-//                                                                   keyPoints);
-//
-//  vector<Mat> out;
-//  for (vector<optional<Mat> >::const_iterator matOption = matOptions.begin();
-//      matOption != matOptions.end(); ++matOption) {
-////  BOOST_FOREACH(const optional<Mat> matOption, matOptions){
-//  const Mat mat = matOption->is_initialized() ? matOption->get() : Mat();
-//  out.push_back(mat);
-//}
-//  return out;
-//}
-
 }

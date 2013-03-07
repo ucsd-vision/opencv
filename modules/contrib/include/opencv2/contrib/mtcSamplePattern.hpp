@@ -28,6 +28,10 @@ CV_EXPORTS_W vector<double> getScaleFactors(const double samplingRadius,
                                             const double maxRadius,
                                             const int numScales);
 
+vector<tuple<tuple<int, int>, tuple<double, double>>> getRealScaleTargets(
+    const vector<double>& idealScalingFactors, const int imageWidth,
+    const int imageHeight);
+
 CV_EXPORTS_W Mat getRealScaleTargetsMat(
     const vector<double>& idealScalingFactors, const int imageWidth,
     const int imageHeight);
@@ -47,17 +51,14 @@ CV_EXPORTS_W Point2f samplePoint(const double samplingRadius,
                                  const double realScaleFactorY,
                                  const int angleIndex, const Point2f& keyPoint);
 
-
-CV_EXPORTS_W vector<Option<Mat>> rawLogPolarSeq(
+/**
+ * vector<Option<Mat>>
+ */
+CV_EXPORTS_W vector<vector<Mat> > rawLogPolarSeq(
     const double minRadius, const double maxRadius, const int numScales,
     const int numAngles, const double blurWidth, const Mat& image,
     const vector<KeyPoint>& keyPoints);
 
-//vector<Mat> rawLogPolarSeq(const double minRadius, const double maxRadius,
-//                           const int numScales, const int numAngles,
-//                           const double blurWidth, const Mat& image,
-//                           const vector<KeyPoint>& keyPoints);
-
-} // namespace cv
+}  // namespace cv
 
 #endif

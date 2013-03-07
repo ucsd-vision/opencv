@@ -222,6 +222,9 @@ type_dict = {
 
     "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
 
+    "vector_vector_Mat": { "j_type" : "List<List<Mat>>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Mat> > %(n)s" },
+    # TODO: Use boost::optional
+    #"vector_Option_Mat": { "j_type" : "List<List<Mat>>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Mat> > %(n)s" },
     "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
     "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
     "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },

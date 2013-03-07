@@ -221,6 +221,18 @@ void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat)
     }
 }
 
+void Mat_to_vector_vector_Mat(cv::Mat& mat, std::vector<std::vector<cv::Mat> >& vv_mat) {
+  std::vector<cv::Mat> v_mat;
+  Mat_to_vector_Mat(mat, v_mat);
+
+  vv_mat.clear();
+  for (int i = 0; i < v_mat.size(); ++i) {
+    std::vector<cv::Mat> out;
+    Mat_to_vector_Mat(v_mat.at(i), out);
+    vv_mat.push_back(out);
+  }
+}
+
 
 void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
 {
@@ -231,6 +243,17 @@ void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
         long long addr = (long long) new Mat(v_mat[i]);
         mat.at< Vec<int, 2> >(i, 0) = Vec<int, 2>(addr>>32, addr&0xffffffff);
     }
+}
+
+void vector_vector_Mat_to_Mat(std::vector<std::vector<cv::Mat> >& vv_mat, cv::Mat& mat) {
+  std::vector<cv::Mat> v_mat;
+  for (int i = 0; i < vv_mat.size(); ++i) {
+    cv::Mat out;
+    vector_Mat_to_Mat(vv_mat.at(i), out);
+    v_mat.push_back(out);
+  }
+
+  vector_Mat_to_Mat(v_mat, mat);
 }
 
 #ifdef HAVE_OPENCV_FEATURES2D

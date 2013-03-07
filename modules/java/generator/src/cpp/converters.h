@@ -47,6 +47,9 @@ void vector_KeyPoint_to_Mat(std::vector<cv::KeyPoint>& v_kp, cv::Mat& mat);
 void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat);
 void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat);
 
+void Mat_to_vector_vector_Mat(cv::Mat& mat, std::vector<std::vector<cv::Mat> >& vv_mat);
+void vector_vector_Mat_to_Mat(std::vector<std::vector<cv::Mat> >& vv_mat, cv::Mat& mat);
+
 #ifdef HAVE_OPENCV_FEATURES2D
 void Mat_to_vector_DMatch(cv::Mat& mat, std::vector<cv::DMatch>& v_dm);
 void vector_DMatch_to_Mat(std::vector<cv::DMatch>& v_dm, cv::Mat& mat);

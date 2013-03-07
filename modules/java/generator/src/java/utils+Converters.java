@@ -250,6 +250,15 @@ public class Converters {
         return res;
     }
 
+    public static Mat vector_vector_Mat_to_Mat(List<List<Mat>> matss) {
+    	List<Mat> mats = new ArrayList<Mat>();
+    	for (int i = 0; i < matss.size(); i++) {
+    		Mat mat = vector_Mat_to_Mat(matss.get(i));
+    		mats.add(mat);
+    	}
+    	return vector_Mat_to_Mat(mats);
+    }
+    
     public static void Mat_to_vector_Mat(Mat m, List<Mat> mats) {
         if (mats == null)
             throw new java.lang.IllegalArgumentException("mats == null");
@@ -265,6 +274,17 @@ public class Converters {
             long addr = (((long) buff[i * 2]) << 32) | (((long) buff[i * 2 + 1]) & 0xffffffffL);
             mats.add(new Mat(addr));
         }
+    }
+    
+    public static void Mat_to_vector_vector_Mat(Mat m, List<List<Mat>> matss) {
+    	List<Mat> mats = new ArrayList<Mat>();
+    	Mat_to_vector_Mat(m, mats);
+    	matss.clear();
+    	for (int i = 0; i < mats.size(); ++i) {
+    		List<Mat> out = new ArrayList<Mat>();
+    		Mat_to_vector_Mat(mats.get(i), out);
+    		matss.add(out);
+    	}
     }
 
     public static Mat vector_float_to_Mat(List<Float> fs) {

@@ -137,8 +137,8 @@ vector<Option<NCCBlock> > extract(const NCCLogPolarExtractor& self,
   for (vector<Option<Mat> >::const_iterator sampleOption = sampleOptions.begin();
        sampleOption != sampleOptions.end(); ++sampleOption) {
 //  BOOST_FOREACH(const optional<Mat> sampleOption, sampleOptions){
-  if (isDefined(sampleOption)) {
-    const Mat sample = get(sampleOption);
+  if (isDefined(*sampleOption)) {
+    const Mat sample = get(*sampleOption);
     CV_Assert(sample.rows == self.numScales);
     CV_Assert(sample.cols == self.numAngles);
     out.push_back(Some<NCCBlock>(getNCCBlock(sample)));
@@ -300,8 +300,8 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
       const double dotProduct = correlation.at<double>(rowIndex, col);
       cout << dotProduct << endl;
       const double normalized = nccFromUnnormalized(
-          leftBlock.scaleMap.data.at(scaleOffset),
-          rightBlock.scaleMap.data.at(-scaleOffset), dotProduct);
+          leftBlock.scaleMap.get(scaleOffset),
+          rightBlock.scaleMap.get(-scaleOffset), dotProduct);
     }
   }
 
@@ -354,14 +354,11 @@ double distanceInternal(const NCCLogPolarMatcher& self, const NCCBlock& left,
  * Distances are -1 where invalid.
  * If the distance is symmetric, there is redundancy across the diagonal.
  */
-Mat matchAllPairs(const int scaleSearchRadius, const Mat& leftBlocks,
-                  const Mat& rightBlocks) {
+Mat matchAllPairs(const int scaleSearchRadius, const vector<Option<NCCBlock> >& lefts,
+                  const vector<Option<NCCBlock> >& rights) {
   const NCCLogPolarMatcher matcher(scaleSearchRadius);
 
-  const vector<Option<NCCBlock> > lefts = matToNCCBlocks(leftBlocks);
-  const vector<Option<NCCBlock> > rights = matToNCCBlocks(rightBlocks);
-
-  Mat distances(leftBlocks.rows, rightBlocks.cols, CV_64FC1, Scalar(-1));
+  Mat distances(lefts.size(), rights.size(), CV_64FC1, Scalar(-1));
   for (int row = 0; row < distances.rows; ++row) {
     for (int col = 0; col < distances.cols; ++col) {
       const Option<NCCBlock>& left = lefts.at(row);

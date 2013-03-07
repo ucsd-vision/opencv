@@ -28,39 +28,35 @@ namespace cv {
  * The two values that characterize a 1D affine function.
  */
 struct CV_EXPORTS_W AffinePair {
-  // Stupid fucking assignment operator. How do I make this const?
-  CV_WRAP
-  double scale;CV_WRAP
-  double offset;
+  CV_WRAP double scale;
+  CV_WRAP double offset;
 
   AffinePair() {
   }
 
-  AffinePair(const double scale_, const double offset_)
+  CV_WRAP AffinePair(const double scale_, const double offset_)
       : scale(scale_),
         offset(offset_) {
   }
 };
-
-CV_EXPORTS_W AffinePair getAffinePair(const Mat& descriptor);
 
 /**
  * Data needed to determine normalized dot product from dot product
  * of unnormalized vectors.
  */
 struct CV_EXPORTS_W NormalizationData {
-  CV_WRAP
-  AffinePair affinePair;
+  CV_WRAP AffinePair affinePair;
   // This is the sum of the elements of the normalized vector.
-  CV_WRAP
-  double elementSum;CV_WRAP
-  int size;
+  CV_WRAP double elementSum;
+  CV_WRAP int size;
 
   NormalizationData() {
   }
 
-  NormalizationData(const AffinePair& affinePair_, const double elementSum_,
-                    const int size_)
+  CV_WRAP NormalizationData(
+      const AffinePair& affinePair_,
+      const double elementSum_,
+      const int size_)
       : affinePair(affinePair_),
         elementSum(elementSum_),
         size(size_) {
@@ -73,18 +69,27 @@ struct CV_EXPORTS_W NormalizationData {
  */
 template<class A>
 struct ScaleMap {
-  std::map<int, A> data;
+  int radius;
+  vector<A> privateData;
+
+  const A& get(int index) const {
+    CV_Assert(index >= -radius);
+    CV_Assert(index <= radius);
+
+    return privateData.at(index + radius);
+  }
 
   ScaleMap() {
   }
 
-  ScaleMap(const std::map<int, A>& data_)
-      : data(data_) {
+  ScaleMap(const std::map<int, A>& data_) {
     vector<int> keys;
 
-    for (typename std::map<int, A>::const_iterator keyValue = data.begin();
-        keyValue != data.end(); ++keyValue) {
+    privateData.resize(keys.size());
+    for (typename std::map<int, A>::const_iterator keyValue = data_.begin();
+        keyValue != data_.end(); ++keyValue) {
       keys.push_back(keyValue->first);
+      privateData.at(keyValue->first + data_.size() / 2) = keyValue->second;
     }
 
     // Now keys is sorted.
@@ -99,13 +104,45 @@ struct ScaleMap {
   }
 };
 
+///**
+// * Duplicated so the wrapper generator will find it.
+// *
+// * A mapping from scale levels. Scale levels must be a sequential and
+// * symmetric about zero.
+// */
+//struct ScaleMapNormalizationData {
+//  std::map<int, NormalizationData> data;
+//
+//  ScaleMapNormalizationData() {
+//  }
+//
+//  ScaleMapNormalizationData(const std::map<int, NormalizationData>& data_)
+//      : data(data_) {
+//    vector<int> keys;
+//
+//    for (typename std::map<int, NormalizationData>::const_iterator keyValue = data.begin();
+//        keyValue != data.end(); ++keyValue) {
+//      keys.push_back(keyValue->first);
+//    }
+//
+//    // Now keys is sorted.
+//    sort(keys.begin(), keys.end());
+//    const int minKey = keys.at(0);
+//    const int maxKey = keys.at(keys.size() - 1);
+//
+//    CV_Assert(-minKey == maxKey);
+//    for (int index = 0; index < keys.size(); ++index) {
+//      CV_Assert(keys.at(index) == index + minKey);
+//    }
+//  }
+//};
+
 /**
  * The descriptor. Contains a Fourier-space version of the log polar
  * data as well as normalization data for each scale.
  */
 struct CV_EXPORTS_W NCCBlock {
-  CV_WRAP
-  Mat fourierData;CV_WRAP
+  CV_WRAP Mat fourierData;CV_WRAP
   ScaleMap<NormalizationData> scaleMap;
 
   NCCBlock() {
@@ -115,7 +152,7 @@ struct CV_EXPORTS_W NCCBlock {
            const ScaleMap<NormalizationData>& scaleMap_)
       : fourierData(fourierData_),
         scaleMap(scaleMap_) {
-    CV_Assert(fourierData.rows - 1 == scaleMap.data.size());
+    CV_Assert(fourierData.rows - 1 == 2 * scaleMap.radius + 1);
   }
 };
 
@@ -161,7 +198,7 @@ struct CV_EXPORTS_W NCCLogPolarMatcher {
   }
 };
 
-
+CV_EXPORTS_W AffinePair getAffinePair(const Mat& descriptor);
 
 NormalizationData getNormalizationData(const Mat& descriptor);
 
@@ -190,8 +227,8 @@ Mat responseMapToDistanceMap(const Mat& responseMap);
 Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
                    const NCCBlock& right);
 
-CV_EXPORTS_W Mat matchAllPairs(const int scaleSearchRadius,
-                               const Mat& leftBlocks, const Mat& rightBlocks);
+Mat matchAllPairs(const int scaleSearchRadius, const vector<Option<NCCBlock> >& lefts,
+                  const vector<Option<NCCBlock> >& rights);
 
 double distanceInternal(const NCCLogPolarMatcher& self, const NCCBlock& left,
                         const NCCBlock& right);
