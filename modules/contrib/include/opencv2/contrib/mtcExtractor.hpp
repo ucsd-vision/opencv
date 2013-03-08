@@ -230,6 +230,8 @@ CV_EXPORTS_W NCCBlock getNCCBlock(const Mat& samples);
 struct CV_EXPORTS_W VectorOptionNCCBlock {
   vector<Option<NCCBlock>> data;
 
+  CV_WRAP int getSize() { return data.size(); }
+
   CV_WRAP bool isDefinedAtIndex(const int index) {
     return isDefined(data.at(index));
   }

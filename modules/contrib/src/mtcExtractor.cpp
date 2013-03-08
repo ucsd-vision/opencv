@@ -129,32 +129,29 @@ NCCBlock getNCCBlock(const Mat& samples) {
 /**
  * Extract descriptors from the given keypoints.
  */
-VectorOptionNCCBlock extract(const NCCLogPolarExtractor& self,
-                                            const Mat& image,
-                                            const vector<KeyPoint>& keyPoints) {
-  const vector<Option<Mat> > sampleOptions = rawLogPolarSeq(
-      self.minRadius, self.maxRadius, self.numScales, self.numAngles,
-      self.blurWidth, image, keyPoints);
+VectorOptionNCCBlock extract(const NCCLogPolarExtractor& self, const Mat& image,
+                             const vector<KeyPoint>& keyPoints) {
+  const vector<Option<Mat> > sampleOptions = rawLogPolarSeq(self.minRadius,
+                                                            self.maxRadius,
+                                                            self.numScales,
+                                                            self.numAngles,
+                                                            self.blurWidth,
+                                                            image, keyPoints);
   CV_Assert(sampleOptions.size() == keyPoints.size());
 
-//  cout << "sampleOptions.size " << sampleOptions.size() << endl;
-
   vector<Option<NCCBlock> > out;
-  for (vector<Option<Mat> >::const_iterator sampleOption = sampleOptions.begin();
-       sampleOption != sampleOptions.end(); ++sampleOption) {
-//  BOOST_FOREACH(const optional<Mat> sampleOption, sampleOptions){
-  if (isDefined(*sampleOption)) {
-    const Mat sample = get(*sampleOption);
-    CV_Assert(sample.rows == self.numScales);
-    CV_Assert(sample.cols == self.numAngles);
-    out.push_back(Some<NCCBlock>(getNCCBlock(sample)));
-  } else {
-    out.push_back(None<NCCBlock>());
+  for (const auto& sampleOption : sampleOptions) {
+    if (isDefined(sampleOption)) {
+      const Mat sample = get(sampleOption);
+      CV_Assert(sample.rows == self.numScales);
+      CV_Assert(sample.cols == self.numAngles);
+      out.push_back(Some<NCCBlock>(getNCCBlock(sample)));
+    } else {
+      out.push_back(None<NCCBlock>());
+    }
   }
-}
 
   CV_Assert(out.size() == keyPoints.size());
-//  cout << "out.size " << out.size() << endl;
   return VectorOptionNCCBlock(out);
 }
 
