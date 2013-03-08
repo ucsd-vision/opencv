@@ -30,8 +30,17 @@ using boost::optional;
  * Normalize descriptor to have zero mean and unit norm.
  */
 Mat normalizeL2(const Mat& descriptor) {
-  const AffinePair affinePair = getAffinePair(descriptor);
-  return (descriptor - affinePair.offset) / affinePair.scale;
+  Mat doubleDescriptor;
+  descriptor.convertTo(doubleDescriptor, CV_64F);
+
+  const double offset = mean(doubleDescriptor).val[0];
+  const Mat centered = doubleDescriptor - offset;
+  const double scale = norm(centered);
+  CV_Assert(scale > 0);
+  return centered / scale;
+//
+//  const AffinePair affinePair = getAffinePair(descriptor);
+//  return (descriptor - affinePair.offset) / affinePair.scale;
 }
 
 
