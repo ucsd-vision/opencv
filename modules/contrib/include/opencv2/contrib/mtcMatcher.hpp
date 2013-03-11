@@ -68,14 +68,16 @@ struct CV_EXPORTS_W VectorNCCBlock {
     return data.at(index);
   }
 
-  VectorNCCBlock() {}
+  CV_WRAP void pushBack(const NCCBlock& element) { data.push_back(element); }
+
+  CV_WRAP VectorNCCBlock() {}
 
   VectorNCCBlock(const vector<NCCBlock>& data_) : data(data_) {}
 };
 
 CV_WRAP VectorNCCBlock flatten(const VectorOptionNCCBlock& options);
 
-CV_WRAP Mat matchAllPairs(const int scaleSearchRadius, const VectorNCCBlock& lefts,
+CV_WRAP Mat matchAllPairs(const NCCLogPolarMatcher& matcher, const VectorNCCBlock& lefts,
                   const VectorNCCBlock& rights);
 
 //CV_EXPORTS_W Mat distanceMapBetweenKeyPoints(const double minRadius, const double maxRadius,

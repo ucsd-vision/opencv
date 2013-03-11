@@ -207,12 +207,10 @@ VectorNCCBlock flatten(const VectorOptionNCCBlock& options) {
  * return distances in a Mat where row indexes left and col indexes right.
  * Distances are -1 where invalid.
  */
-Mat matchAllPairs(const int scaleSearchRadius, const VectorNCCBlock& lefts_,
+Mat matchAllPairs(const NCCLogPolarMatcher& matcher, const VectorNCCBlock& lefts_,
                   const VectorNCCBlock& rights_) {
   const auto lefts = lefts_.data;
   const auto rights = rights_.data;
-
-  const NCCLogPolarMatcher matcher(scaleSearchRadius);
 
   Mat distances(lefts.size(), rights.size(), CV_64FC1, Scalar(-1));
   for (int row = 0; row < distances.rows; ++row) {
