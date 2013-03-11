@@ -39,19 +39,44 @@ struct CV_EXPORTS_W NCCLogPolarMatcher {
   }
 };
 
-Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
+CV_WRAP double nccFromUnnormalized(const NormalizationData& leftData,
+                           const NormalizationData& rightData,
+                           const double unnormalizedInnerProduct);
+
+CV_WRAP Mat correlationFromPreprocessed(const Mat& left, const Mat& right);
+
+CV_WRAP Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
                    const NCCBlock& rightBlock);
 
-Mat responseMapToDistanceMap(const Mat& responseMap);
+CV_WRAP Mat responseMapToDistanceMap(const Mat& responseMap);
 
-Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
+CV_WRAP Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
                    const NCCBlock& right);
 
-Mat matchAllPairs(const int scaleSearchRadius, const vector<Option<NCCBlock> >& lefts,
-                  const vector<Option<NCCBlock> >& rights);
-
-double distanceInternal(const NCCLogPolarMatcher& self, const NCCBlock& left,
+CV_WRAP double distance(const NCCLogPolarMatcher& self, const NCCBlock& left,
                         const NCCBlock& right);
+
+/**
+ * Wrapper generator workaround.
+ */
+struct CV_EXPORTS_W VectorNCCBlock {
+  vector<NCCBlock> data;
+
+  CV_WRAP int getSize() { return data.size(); }
+
+  CV_WRAP const NCCBlock& getAtIndex(const int index) {
+    return data.at(index);
+  }
+
+  VectorNCCBlock() {}
+
+  VectorNCCBlock(const vector<NCCBlock>& data_) : data(data_) {}
+};
+
+CV_WRAP VectorNCCBlock flatten(const VectorOptionNCCBlock& options);
+
+CV_WRAP Mat matchAllPairs(const int scaleSearchRadius, const VectorNCCBlock& lefts,
+                  const VectorNCCBlock& rights);
 
 //CV_EXPORTS_W Mat distanceMapBetweenKeyPoints(const double minRadius, const double maxRadius,
 //                                const int numScales, const int numAngles,

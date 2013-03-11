@@ -36,6 +36,8 @@ Mat normalizeL2(const Mat& descriptor) {
   const double offset = mean(doubleDescriptor).val[0];
   const Mat centered = doubleDescriptor - offset;
   const double scale = norm(centered);
+  // If this fails, it probably means you're on a uniform patch.
+  // TODO: Address this degenerate case.
   CV_Assert(scale > 0);
   return centered / scale;
 //

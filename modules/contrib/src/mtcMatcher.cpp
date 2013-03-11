@@ -56,7 +56,7 @@ double nccFromUnnormalized(const NormalizationData& leftData,
   CV_Assert(denominator != 0);
 
   const double correlation = numerator / denominator;
-  cout << correlation << endl;
+//  cout << correlation << endl;
   CV_Assert(correlation <= 1 + epsilon());
   CV_Assert(correlation >= -1 - epsilon());
   return correlation;
@@ -97,38 +97,7 @@ Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
 
   vector<Mat> dotTimesLayers = {realPart, imaginaryPart};
   Mat dotTimes;
-
-
-
   merge(dotTimesLayers, dotTimes);
-
-//  // The complex conjugate of the left Mat.
-//  Mat leftConjugate(left.rows, left.cols, left.type());
-//  for (int row = 0; row < left.rows; ++row) {
-//    // The input matrices store complex values, with the odd number indices
-//    // storing the imaginary parts. So we start at 1 and stride through by 2.
-//    for (int col = 1; col < left.cols; col += 2) {
-//      leftConjugate.at<double>(row, col) = -left.at<double>(row, col);
-//    }
-//  }
-//
-//  // Now we do a pairwise multiplication of complex values.
-//  Mat dotTimes;
-//  for (int row = 0; row < left.rows; ++row) {
-//    for (int col = 0; col < left.cols; col += 2) {
-//      const double leftReal = left.at<double>(row, col);
-//      const double leftImaginary = left.at<double>(row, col + 1);
-//      const double rightReal = right.at<double>(row, col);
-//      const double rightImaginary = right.at<double>(row, col + 1);
-//
-//      const double productReal = leftReal * rightReal
-//          - leftImaginary * rightImaginary;
-//      const double productImaginary = leftReal * rightImaginary
-//          + leftImaginary * rightReal;
-//      dotTimes.at<double>(row, col) = productReal;
-//      dotTimes.at<double>(row, col + 1) = productImaginary;
-//    }
-//  }
 
   return ifft2DDouble(dotTimes);
 }
@@ -144,32 +113,43 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
   // why we're dividing by 2 here.
   CV_Assert(scaleSearchRadius < leftBlock.fourierData.rows / 2);
 
-  cout << leftBlock.fourierData.rows << endl;
-  cout << leftBlock.fourierData.cols << endl;
-  cout << leftBlock.fourierData.channels() << endl;
+//  cout << leftBlock.fourierData.rows << endl;
+//  cout << leftBlock.fourierData.cols << endl;
+//  cout << leftBlock.fourierData.channels() << endl;
 
   // This is real valued.
   const Mat correlation = correlationFromPreprocessed(rightBlock.fourierData,
                                                       leftBlock.fourierData);
   CV_Assert(correlation.type() == CV_64FC1);
 
-  cout << correlation << endl;
+//  cout << correlation << endl;
 
-  Mat normalized(correlation);
+//  Mat normalized = correlation.clone();
+//  for (int scaleOffset = -scaleSearchRadius; scaleOffset <= scaleSearchRadius;
+//      ++scaleOffset) {
+//    const int rowIndex = mod(scaleOffset, leftBlock.fourierData.rows);
+//    for (int col = 0; col < correlation.cols; ++col) {
+//      const double dotProduct = correlation.at<double>(rowIndex, col);
+//      const double normalizedValue = nccFromUnnormalized(
+//          leftBlock.scaleMap.get(scaleOffset),
+//          rightBlock.scaleMap.get(-scaleOffset), dotProduct);
+//      normalized.at<double>(rowIndex, col) = normalizedValue;
+//    }
+//  }
+
+  Mat normalized(2 * scaleSearchRadius + 1, correlation.cols, correlation.type());
   for (int scaleOffset = -scaleSearchRadius; scaleOffset <= scaleSearchRadius;
       ++scaleOffset) {
-    const int rowIndex = mod(scaleOffset, leftBlock.fourierData.rows);
+    const int correlationRowIndex = mod(scaleOffset, leftBlock.fourierData.rows);
     for (int col = 0; col < correlation.cols; ++col) {
-      cout << scaleOffset << endl;
-      const double dotProduct = correlation.at<double>(rowIndex, col);
-      cout << dotProduct << endl;
-      const double normalized = nccFromUnnormalized(
+      const double dotProduct = correlation.at<double>(correlationRowIndex, col);
+      const double normalizedValue = nccFromUnnormalized(
           leftBlock.scaleMap.get(scaleOffset),
           rightBlock.scaleMap.get(-scaleOffset), dotProduct);
+      const int normalizedRowIndex = scaleOffset + scaleSearchRadius;
+      normalized.at<double>(normalizedRowIndex, col) = normalizedValue;
     }
   }
-
-  cout << normalized << endl;
 
   return normalized;
 }
@@ -199,7 +179,7 @@ Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
 /**
  * The distance between two descriptors.
  */
-double distanceInternal(const NCCLogPolarMatcher& self, const NCCBlock& left,
+double distance(const NCCLogPolarMatcher& self, const NCCBlock& left,
                         const NCCBlock& right) {
   const Mat distanceMap = getDistanceMap(self, left, right);
   return *min_element(distanceMap.begin<double>(), distanceMap.end<double>());
@@ -212,26 +192,36 @@ double distanceInternal(const NCCLogPolarMatcher& self, const NCCBlock& left,
 //                          matToNCCBlock(rightBlock).get());
 //}
 
+VectorNCCBlock flatten(const VectorOptionNCCBlock& options) {
+  vector<NCCBlock> data;
+  for (int index = 0; index < options.getSize(); ++index) {
+    if (options.isDefinedAtIndex(index)) {
+      data.push_back(options.getAtIndex(index));
+    }
+  }
+  return VectorNCCBlock(data);
+}
+
 /**
  * Match all descriptors on the left to all descriptors on the right,
  * return distances in a Mat where row indexes left and col indexes right.
  * Distances are -1 where invalid.
- * If the distance is symmetric, there is redundancy across the diagonal.
  */
-Mat matchAllPairs(const int scaleSearchRadius, const vector<Option<NCCBlock> >& lefts,
-                  const vector<Option<NCCBlock> >& rights) {
+Mat matchAllPairs(const int scaleSearchRadius, const VectorNCCBlock& lefts_,
+                  const VectorNCCBlock& rights_) {
+  const auto lefts = lefts_.data;
+  const auto rights = rights_.data;
+
   const NCCLogPolarMatcher matcher(scaleSearchRadius);
 
   Mat distances(lefts.size(), rights.size(), CV_64FC1, Scalar(-1));
   for (int row = 0; row < distances.rows; ++row) {
     for (int col = 0; col < distances.cols; ++col) {
-      const Option<NCCBlock>& left = lefts.at(row);
-      const Option<NCCBlock>& right = rights.at(col);
+      const NCCBlock& left = lefts.at(row);
+      const NCCBlock& right = rights.at(col);
 
-      if (isDefined(left) && isDefined(right)) {
-        distances.at<double>(row, col) = distanceInternal(matcher, get(left),
-                                                          get(right));
-      }
+      distances.at<double>(row, col) = distance(matcher, left,
+                                                          right);
     }
   }
   return distances;
