@@ -213,7 +213,10 @@ Mat matchAllPairs(const NCCLogPolarMatcher& matcher, const VectorNCCBlock& lefts
   const auto rights = rights_.data;
 
   Mat distances(lefts.size(), rights.size(), CV_64FC1, Scalar(-1));
+
+  #pragma omp parallel for
   for (int row = 0; row < distances.rows; ++row) {
+
     for (int col = 0; col < distances.cols; ++col) {
       const NCCBlock& left = lefts.at(row);
       const NCCBlock& right = rights.at(col);

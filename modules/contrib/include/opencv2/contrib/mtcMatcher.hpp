@@ -30,6 +30,8 @@ using namespace std;
 struct CV_EXPORTS_W NCCLogPolarMatcher {
   CV_WRAP int scaleSearchRadius;
 
+  CV_WRAP int getScaleSearchRadius() const { return scaleSearchRadius; }
+
   NCCLogPolarMatcher() {
   }
 

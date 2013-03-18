@@ -194,11 +194,21 @@ struct CV_EXPORTS_W NCCBlock {
  * numAngles must be >= 2.
  */
 struct CV_EXPORTS_W NCCLogPolarExtractor {
-  CV_WRAP double minRadius;
-  CV_WRAP double maxRadius;
-  CV_WRAP int numScales;
-  CV_WRAP int numAngles;
-  CV_WRAP double blurWidth;
+  double minRadius;
+  double maxRadius;
+  int numScales;
+  int numAngles;
+  double blurWidth;
+
+  CV_WRAP double getMinRadius() { return minRadius; }
+
+  CV_WRAP double getMaxRadius() { return maxRadius; }
+
+  CV_WRAP int getNumScales() const { return numScales; }
+
+  CV_WRAP int getNumAngles() const { return numAngles; }
+
+  CV_WRAP double getBlurWidth() const { return blurWidth; }
 
   NCCLogPolarExtractor() {
   }
