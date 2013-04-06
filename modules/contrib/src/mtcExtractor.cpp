@@ -37,7 +37,14 @@ Mat normalizeL2(const Mat& descriptor) {
   const Mat centered = doubleDescriptor - offset;
   const double scale = norm(centered);
   // If this fails, it probably means you're on a uniform patch.
+  // We address this now by returning random noise; basically a guaranteed
+  // failure, so hopefully this doesn't happen too often.
   // TODO: Address this degenerate case.
+//  if (scale == 0) {
+//    const Mat noise(descriptor.rows, descriptor.cols, descriptor.type());
+//    randn(noise, 0, 1);
+//    return normalizeL2(noise);
+//  }
   CV_Assert(scale > 0);
   return centered / scale;
 //
@@ -59,7 +66,7 @@ AffinePair getAffinePair(const Mat& descriptor) {
 
   const double offset = mean(doubleDescriptor).val[0];
   const double scale = norm(doubleDescriptor - offset);
-  CV_Assert(scale > 0);
+//  CV_Assert(scale > 0);
   return AffinePair(scale, offset);
 }
 
@@ -68,6 +75,17 @@ AffinePair getAffinePair(const Mat& descriptor) {
  */
 NormalizationData getNormalizationData(const Mat& descriptor) {
   CV_Assert(descriptor.type() == CV_8UC1);
+  const AffinePair affinePair = getAffinePair(descriptor);
+
+  // Check if we're dealing with a uniform patch.
+  // If so, we give it an artificially high scale so it will fail to match
+  // everything.
+  if (affinePair.scale == 0) {
+    return NormalizationData(AffinePair(1, affinePair.offset),
+                             0,
+                             descriptor.total());
+  }
+
   return NormalizationData(getAffinePair(descriptor),
                            sum(normalizeL2(descriptor)).val[0],
                            descriptor.total());
