@@ -213,7 +213,7 @@ void AffineAdaptedFeature2D::detectImpl(const Mat& /*image*/,
 			"Not implemented method because it's not efficient to split feature detection and description extraction here\n");
 }
 
-Mat detectAndExtractDescriptorsASIFT(const Mat& image,
+void detectAndExtractDescriptorsASIFT(const Mat& image,
 		vector<KeyPoint>& keyPoints, Mat& descriptors) {
 //	const SiftFeatureDetector siftDetector;
 //	const SiftDescriptorExtractor siftExtractor;
@@ -228,7 +228,7 @@ Mat detectAndExtractDescriptorsASIFT(const Mat& image,
 
 //    const AffineAdaptedFeature2D asift(sift);
 	const AffineAdaptedFeature2D asift(siftDetector, siftExtractor);
-    asift(image, InputArray::NONE, keyPoints, descriptors);
+    asift(image, NULL, keyPoints, descriptors);
 }
 
 }
