@@ -217,7 +217,7 @@ Mat detectAndExtractDescriptorsASIFT(const Mat& image,
 //			FeatureDetector::SIFT);
 //	const Ptr<FeatureExtractor> siftExtractor = FeatureExtractor::create(
 //			FeatureExtractor::SIFT);
-	const Ptr<Feature2D> sift = new SIFT();
+	const Ptr<Feature2D> sift(new SIFT());
 
     const AffineAdaptedFeature2D asift(sift);
     asift(image, InputArray::NONE, keyPoints, descriptors);
