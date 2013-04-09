@@ -971,6 +971,8 @@ namespace cv
 
 #include "opencv2/contrib/mtc.hpp"
 
+#include "opencv2/contrib/affineAdaptedFeature.hpp"
+
 #endif
 
 #endif
