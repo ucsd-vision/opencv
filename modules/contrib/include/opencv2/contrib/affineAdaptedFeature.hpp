@@ -52,7 +52,7 @@ protected:
 	std::vector<cv::Vec2f> affineTransformParams;
 };
 
-CV_WRAP Mat detectAndExtractDescriptorsASIFT(
+CV_WRAP void detectAndExtractDescriptorsASIFT(
 		const Mat& image,
 		vector<KeyPoint>& keyPoints,
 		Mat& descriptors);
