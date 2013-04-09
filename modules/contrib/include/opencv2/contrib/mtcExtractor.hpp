@@ -18,7 +18,6 @@
 
 #include "mtcSamplePattern.hpp"
 #include "mtcUtil.hpp"
-#include "mtcWrapper.hpp"
 
 /////////////////////////////////////////////
 

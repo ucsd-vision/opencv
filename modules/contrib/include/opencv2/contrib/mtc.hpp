@@ -3,7 +3,6 @@
 
 #include "mtcSamplePattern.hpp"
 #include "mtcUtil.hpp"
-#include "mtcWrapper.hpp"
 #include "mtcExtractor.hpp"
 #include "mtcMatcher.hpp"
 
