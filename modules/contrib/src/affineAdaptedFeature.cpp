@@ -149,7 +149,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 	vector < vector<KeyPoint> > keypoints(affineTransformParams.size());
 	vector<Mat> descriptors(affineTransformParams.size());
 
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (size_t paramsIndex = 0; paramsIndex < affineTransformParams.size();
 			paramsIndex++) {
 		const Vec2f& params = affineTransformParams[paramsIndex];
@@ -209,6 +209,16 @@ void AffineAdaptedFeature2D::detectImpl(const Mat& /*image*/,
 		vector<KeyPoint>& /*keypoints*/, const Mat& /*mask*/) const {
 	CV_Error(CV_StsNotImplemented,
 			"Not implemented method because it's not efficient to split feature detection and description extraction here\n");
+}
+
+Mat detectAndExtractDescriptorsASIFT(const Mat& image,
+		vector<KeyPoint>& keyPoints, Mat& descriptors) {
+	const Ptr<FeatureDetector> siftDetector = FeatureDetector::create(
+			FeatureDetector::SIFT);
+	const Ptr<FeatureExtractor> siftExtractor = FeatureExtractor::create(
+			FeatureExtractor::SIFT);
+    const AffineAdaptedFeature2D asift(siftDetector, siftExtractor);
+    asift(image, InputArray::NONE, keyPoints, descriptors);
 }
 
 }

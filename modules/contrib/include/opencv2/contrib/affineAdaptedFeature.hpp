@@ -18,6 +18,9 @@
 /////////////////////////////////////////////////////
 
 namespace cv {
+
+using namespace std;
+
 class AffineAdaptedFeature2D: public cv::Feature2D {
 public:
 	AffineAdaptedFeature2D(const cv::Ptr<cv::Feature2D>& feature2d);
@@ -48,6 +51,12 @@ protected:
 
 	std::vector<cv::Vec2f> affineTransformParams;
 };
+
+CV_WRAP Mat detectAndExtractDescriptorsASIFT(
+		const Mat& image,
+		vector<KeyPoint>& keyPoints,
+		Mat& descriptors);
+
 }
 
 #endif
