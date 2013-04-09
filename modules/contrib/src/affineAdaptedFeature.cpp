@@ -213,11 +213,13 @@ void AffineAdaptedFeature2D::detectImpl(const Mat& /*image*/,
 
 Mat detectAndExtractDescriptorsASIFT(const Mat& image,
 		vector<KeyPoint>& keyPoints, Mat& descriptors) {
-	const Ptr<FeatureDetector> siftDetector = FeatureDetector::create(
-			FeatureDetector::SIFT);
-	const Ptr<FeatureExtractor> siftExtractor = FeatureExtractor::create(
-			FeatureExtractor::SIFT);
-    const AffineAdaptedFeature2D asift(siftDetector, siftExtractor);
+//	const Ptr<FeatureDetector> siftDetector = FeatureDetector::create(
+//			FeatureDetector::SIFT);
+//	const Ptr<FeatureExtractor> siftExtractor = FeatureExtractor::create(
+//			FeatureExtractor::SIFT);
+	const Ptr<Feature2D> sift = new SIFT();
+
+    const AffineAdaptedFeature2D asift(sift);
     asift(image, InputArray::NONE, keyPoints, descriptors);
 }
 
