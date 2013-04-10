@@ -54,7 +54,7 @@ protected:
 
 CV_WRAP void detectAndExtractDescriptorsASIFT(
 		const Mat& image,
-		const KeyPoint& keyPoint,
+		const vector<KeyPoint>& keyPoints,
 		Mat& descriptors);
 
 }

@@ -297,15 +297,16 @@ void AffineAdaptedFeature2D::detectImpl(const Mat& /*image*/,
 }
 
 void detectAndExtractDescriptorsASIFT(const Mat& image,
-		const KeyPoint& keyPoint, Mat& descriptors) {
+		const vector<KeyPoint>& keyPoints, Mat& descriptors) {
+    CV_Assert(keyPoints.size() == 1);
 
-	vector<KeyPoint> keyPoints = { keyPoint };
+	vector<KeyPoint> keyPoints_copy = keyPoints;
 
 	const Ptr<FeatureDetector> siftDetector(new SiftFeatureDetector());
 	const Ptr<DescriptorExtractor> siftExtractor(new SiftDescriptorExtractor());
 
 	const AffineAdaptedFeature2D asift(siftDetector, siftExtractor);
-	asift(image, Mat(), keyPoints, descriptors, true);
+	asift(image, Mat(), keyPoints_copy, descriptors, true);
 }
 
 }
