@@ -266,7 +266,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 					+ A_ptr[5];
 
 			// TODO
-			const KeyPoint newKeyPoint(tx, ty, pt.size);
+			const KeyPoint newKeyPoint(tx, ty, kp.size);
 			vector<KeyPoint> newKeyPoints = { newKeyPoint };
 			CV_Assert(newKeyPoints.size() == 1);
 
