@@ -245,7 +245,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			detectAndComputeImpl(image, mask, _keypoints,
 					descriptors.at(paramsIndex));
 
-			cout << "untilted keypoint is " << kp.pt.x << " " << kp.pt.y << " " << kp.size << " " << endl;
+//			cout << "untilted keypoint is " << kp.pt.x << " " << kp.pt.y << " " << kp.size << " " << endl;
 		} else {
 			Mat transformedImage, transformedMask;
 			Mat Ainv = affineSkew(image, mask, tilt, phi, transformedImage,
@@ -256,7 +256,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			CV_Assert(A.rows == 2);
 			CV_Assert(A.cols == 3);
 
-			cout << A << endl;
+//			cout << A << endl;
 
 			CV_Assert(A.type() == CV_32FC1);
 			const float* A_ptr = A.ptr<const float>();
@@ -265,19 +265,18 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			float ty = A_ptr[3] * kp.pt.x + A_ptr[4] * kp.pt.y
 					+ A_ptr[5];
 
-			// TODO
 			const KeyPoint newKeyPoint(tx, ty, kp.size);
 			vector<KeyPoint> newKeyPoints = { newKeyPoint };
 			CV_Assert(newKeyPoints.size() == 1);
 
-			cout << "tilted image size is " << transformedImage.rows << " " << transformedImage.cols << endl;
-			cout << "tilted keypoint is " << newKeyPoint.pt.x << " " << newKeyPoint.pt.y << endl;
+//			cout << "tilted image size is " << transformedImage.rows << " " << transformedImage.cols << endl;
+//			cout << "tilted keypoint is " << newKeyPoint.pt.x << " " << newKeyPoint.pt.y << endl;
 
 
 			detectAndComputeImpl(transformedImage, transformedMask,
 					newKeyPoints, descriptors.at(paramsIndex));
 
-			cout << "tilted is empty " << descriptors.at(paramsIndex).empty() << endl;
+//			cout << "tilted is empty " << descriptors.at(paramsIndex).empty() << endl;
 		}
 	}
 
