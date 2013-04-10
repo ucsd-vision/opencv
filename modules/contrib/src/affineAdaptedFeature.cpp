@@ -272,8 +272,8 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 		  CV_Assert(descriptor.cols == 128);
 
 		  for (int col = 0; col < 128; ++col) {
-			  CV_Assert(descriptor.type() == CV_64F);
-			  allDescriptorData.push_back(descriptor.at<double>(0, col));
+			  CV_Assert(descriptor.type() == CV_32F);
+			  allDescriptorData.push_back(descriptor.at<float>(0, col));
 		  }
 	  }
   }
