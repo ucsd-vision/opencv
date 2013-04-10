@@ -258,7 +258,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 					+ A_ptr[5];
 
 			const KeyPoint newKeyPoint(tx, ty, 0);
-			const vector<KeyPoint> newKeyPoints = { newKeyPoint };
+			vector<KeyPoint> newKeyPoints = { newKeyPoint };
 
 			detectAndComputeImpl(transformedImage, transformedMask,
 					newKeyPoints, descriptors[paramsIndex]);
