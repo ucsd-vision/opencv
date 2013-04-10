@@ -266,6 +266,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			const KeyPoint newKeyPoint(tx, ty, 0);
 			vector<KeyPoint> newKeyPoints = { newKeyPoint };
 
+			cout << "tilted image size is " << transformedImage.rows << " " << transformedImage.cols << endl;
 			cout << "tilted keypoint is " << newKeyPoint.pt.x << " " << newKeyPoint.pt.y << endl;
 
 
