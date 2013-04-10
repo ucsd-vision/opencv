@@ -243,7 +243,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 		if (tilt == 1.f) // tilt
 				{
 			detectAndComputeImpl(image, mask, _keypoints,
-					descriptors[paramsIndex]);
+					descriptors.at(paramsIndex));
 
 			cout << "untilted keypoint is " << kp.pt.x << " " << kp.pt.y << endl;
 		} else {
@@ -270,7 +270,9 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 
 
 			detectAndComputeImpl(transformedImage, transformedMask,
-					newKeyPoints, descriptors[paramsIndex]);
+					newKeyPoints, descriptors.at(paramsIndex));
+
+			cout << "tilted is empty " << descriptors.at(paramsIndex).empty() << endl;
 		}
 	}
 
