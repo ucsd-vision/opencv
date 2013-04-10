@@ -256,6 +256,8 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			CV_Assert(A.rows == 2);
 			CV_Assert(A.cols == 3);
 
+			cout << A << endl;
+
 			CV_Assert(A.type() == CV_32FC1);
 			const float* A_ptr = A.ptr<const float>();
 			float tx = A_ptr[0] * kp.pt.x + A_ptr[1] * kp.pt.y
