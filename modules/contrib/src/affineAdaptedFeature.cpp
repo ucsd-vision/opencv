@@ -224,7 +224,8 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 
 	CV_Assert(useProvidedKeypoints == true);
 	CV_Assert(!affineTransformParams.empty());
-	CV_Assert(keypoints.size() == 1);
+	CV_Assert(_keypoints.size() == 1);
+	const auto kp = _keypoints.at(0);
 
 //	vector < vector<KeyPoint> > keypoints(affineTransformParams.size());
 	// Each Mat will be single-row.
@@ -249,7 +250,6 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			Mat A;
 			invertAffineTransform(Ainv, A);
 
-			const auto kp = keypoints.at(0);
 			CV_Assert(A.type() == CV_32FC1);
 			const float* A_ptr = A.ptr<const float>();
 			float tx = A_ptr[0] * kp.pt.x + A_ptr[1] * kp.pt.y
