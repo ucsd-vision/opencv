@@ -281,7 +281,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
   CV_Assert(allDescriptorData.size() % 128 == 0);
 
   Mat allDescriptors(allDescriptorData.size() / 128, 128, CV_64F, &allDescriptorData[0]);
-  _descriptors = allDescriptors;
+  allDescriptors.copyTo(_descriptors);
 }
 
 void AffineAdaptedFeature2D::computeImpl(const Mat& /*image*/,
