@@ -99,15 +99,30 @@ int AffineAdaptedFeature2D::descriptorType() const {
 	return descriptorExtractor->descriptorType();
 }
 
+//void AffineAdaptedFeature2D::detectAndComputeImpl(const Mat& image,
+//		const Mat& mask, vector<KeyPoint>& keypoints, Mat& descriptors) const {
+//	if (feature2d)
+//		(*feature2d)(image, mask, keypoints, descriptors);
+//	else {
+//		CV_Assert(featureDetector);
+//		CV_Assert(descriptorExtractor);
+//
+//		featureDetector->detect(image, keypoints, mask);
+//		descriptorExtractor->compute(image, keypoints, descriptors);
+//	}
+//}
+
 void AffineAdaptedFeature2D::detectAndComputeImpl(const Mat& image,
 		const Mat& mask, vector<KeyPoint>& keypoints, Mat& descriptors) const {
-	if (feature2d)
+	if (feature2d) {
+		CV_Assert(false);
 		(*feature2d)(image, mask, keypoints, descriptors);
-	else {
+	} else {
 		CV_Assert(featureDetector);
 		CV_Assert(descriptorExtractor);
 
-		featureDetector->detect(image, keypoints, mask);
+		CV_Assert(keypoints.size() > 0);
+//		featureDetector->detect(image, keypoints, mask);
 		descriptorExtractor->compute(image, keypoints, descriptors);
 	}
 }
@@ -139,16 +154,80 @@ void AffineAdaptedFeature2D::initialize() {
 	}
 }
 
+//void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
+//		vector<KeyPoint>& _keypoints, OutputArray _descriptors,
+//		bool useProvidedKeypoints) const {
+//	Mat image = _image.getMat();
+//	Mat mask = _mask.getMat();
+//
+//	CV_Assert(useProvidedKeypoints == false);
+//	CV_Assert(!affineTransformParams.empty());
+//
+//	vector < vector<KeyPoint> > keypoints(affineTransformParams.size());
+//	vector<Mat> descriptors(affineTransformParams.size());
+//
+////#pragma omp parallel for
+//	for (size_t paramsIndex = 0; paramsIndex < affineTransformParams.size();
+//			paramsIndex++) {
+//		const Vec2f& params = affineTransformParams[paramsIndex];
+//		const float tilt = params[0];
+//		const float phi = params[1];
+//
+//		if (tilt == 1.f) // tilt
+//				{
+//			detectAndComputeImpl(image, mask, keypoints[paramsIndex],
+//					descriptors[paramsIndex]);
+//		} else {
+//			Mat transformedImage, transformedMask;
+//			Mat Ainv = affineSkew(image, mask, tilt, phi, transformedImage,
+//					transformedMask);
+//
+//			detectAndComputeImpl(transformedImage, transformedMask,
+//					keypoints[paramsIndex], descriptors[paramsIndex]);
+//
+//			// correct keypoints coordinates
+//			CV_Assert(Ainv.type() == CV_32FC1);
+//			const float* Ainv_ptr = Ainv.ptr<const float>();
+//			for (size_t kpIndex = 0; kpIndex < keypoints[paramsIndex].size();
+//					kpIndex++) {
+//				KeyPoint& kp = keypoints[paramsIndex][kpIndex];
+//				float tx = Ainv_ptr[0] * kp.pt.x + Ainv_ptr[1] * kp.pt.y
+//						+ Ainv_ptr[2];
+//				float ty = Ainv_ptr[3] * kp.pt.x + Ainv_ptr[4] * kp.pt.y
+//						+ Ainv_ptr[5];
+//				kp.pt.x = tx;
+//				kp.pt.y = ty;
+//			}
+//		}
+//	}
+//
+//	// copy keypoints and descriptors to the output
+//	_keypoints.clear();
+//	Mat allDescriptors;
+//	for (size_t paramsIndex = 0; paramsIndex < affineTransformParams.size();
+//			paramsIndex++) {
+//		_keypoints.insert(_keypoints.end(), keypoints[paramsIndex].begin(),
+//				keypoints[paramsIndex].end());
+//		allDescriptors.push_back(descriptors[paramsIndex]);
+//	}
+//
+//	_descriptors.create(allDescriptors.size(), allDescriptors.type());
+//	Mat _descriptorsMat = _descriptors.getMat();
+//	allDescriptors.copyTo(_descriptorsMat);
+//}
+
 void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 		vector<KeyPoint>& _keypoints, OutputArray _descriptors,
 		bool useProvidedKeypoints) const {
 	Mat image = _image.getMat();
 	Mat mask = _mask.getMat();
 
-	CV_Assert(useProvidedKeypoints == false);
+	CV_Assert(useProvidedKeypoints == true);
 	CV_Assert(!affineTransformParams.empty());
+	CV_Assert(keypoints.size() == 1);
 
-	vector < vector<KeyPoint> > keypoints(affineTransformParams.size());
+//	vector < vector<KeyPoint> > keypoints(affineTransformParams.size());
+	// Each Mat will be single-row.
 	vector<Mat> descriptors(affineTransformParams.size());
 
 //#pragma omp parallel for
@@ -160,45 +239,49 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 
 		if (tilt == 1.f) // tilt
 				{
-			detectAndComputeImpl(image, mask, keypoints[paramsIndex],
+			detectAndComputeImpl(image, mask, _keypoints,
 					descriptors[paramsIndex]);
 		} else {
 			Mat transformedImage, transformedMask;
 			Mat Ainv = affineSkew(image, mask, tilt, phi, transformedImage,
 					transformedMask);
 
-			detectAndComputeImpl(transformedImage, transformedMask,
-					keypoints[paramsIndex], descriptors[paramsIndex]);
+			Mat A;
+			invertAffineTransform(Ainv, A);
 
-			// correct keypoints coordinates
-			CV_Assert(Ainv.type() == CV_32FC1);
-			const float* Ainv_ptr = Ainv.ptr<const float>();
-			for (size_t kpIndex = 0; kpIndex < keypoints[paramsIndex].size();
-					kpIndex++) {
-				KeyPoint& kp = keypoints[paramsIndex][kpIndex];
-				float tx = Ainv_ptr[0] * kp.pt.x + Ainv_ptr[1] * kp.pt.y
-						+ Ainv_ptr[2];
-				float ty = Ainv_ptr[3] * kp.pt.x + Ainv_ptr[4] * kp.pt.y
-						+ Ainv_ptr[5];
-				kp.pt.x = tx;
-				kp.pt.y = ty;
-			}
+			const auto kp = keypoints.at(0);
+			CV_Assert(A.type() == CV_32FC1);
+			const float* A_ptr = A.ptr<const float>();
+			float tx = A_ptr[0] * kp.pt.x + A_ptr[1] * kp.pt.y
+					+ A_ptr[2];
+			float ty = A_ptr[3] * kp.pt.x + A_ptr[4] * kp.pt.y
+					+ A_ptr[5];
+
+			const KeyPoint newKeyPoint(tx, ty, 0);
+			const vector<KeyPoint> newKeyPoints = { newKeyPoint };
+
+			detectAndComputeImpl(transformedImage, transformedMask,
+					newKeyPoints, descriptors[paramsIndex]);
 		}
 	}
 
-	// copy keypoints and descriptors to the output
-	_keypoints.clear();
-	Mat allDescriptors;
-	for (size_t paramsIndex = 0; paramsIndex < affineTransformParams.size();
-			paramsIndex++) {
-		_keypoints.insert(_keypoints.end(), keypoints[paramsIndex].begin(),
-				keypoints[paramsIndex].end());
-		allDescriptors.push_back(descriptors[paramsIndex]);
-	}
+  vector<double> allDescriptorData;
+  for (const Mat descriptor : descriptors) {
+	  if (!descriptor.empty) {
+		  CV_Assert(descriptor.rows == 1);
+		  CV_Assert(descriptor.cols == 128);
 
-	_descriptors.create(allDescriptors.size(), allDescriptors.type());
-	Mat _descriptorsMat = _descriptors.getMat();
-	allDescriptors.copyTo(_descriptorsMat);
+		  for (int col = 0; col < 128; ++col) {
+			  CV_Assert(descriptor.type() == CV_64F);
+			  allDescriptorData.push_back(descriptor.at<double>(0, col));
+		  }
+	  }
+  }
+
+  CV_Assert(allDescriptorData.size() % 128 == 0);
+
+  Mat allDescriptors(allDescriptorData.size() / 128, 128, CV_64F, &allDescriptorData[0]);
+  _descriptors = allDescriptors;
 }
 
 void AffineAdaptedFeature2D::computeImpl(const Mat& /*image*/,
@@ -214,21 +297,15 @@ void AffineAdaptedFeature2D::detectImpl(const Mat& /*image*/,
 }
 
 void detectAndExtractDescriptorsASIFT(const Mat& image,
-		vector<KeyPoint>& keyPoints, Mat& descriptors) {
-//	const SiftFeatureDetector siftDetector;
-//	const SiftDescriptorExtractor siftExtractor;
+		KeyPoint& keyPoint, Mat& descriptors) {
+
+	vector<KeyPoint> keyPoints = { keyPoint };
 
 	const Ptr<FeatureDetector> siftDetector(new SiftFeatureDetector());
 	const Ptr<DescriptorExtractor> siftExtractor(new SiftDescriptorExtractor());
-	//	const Ptr<FeatureDetector> siftDetector = FeatureDetector::create(
-	//			FeatureDetector::SIFT);
-	//	const Ptr<FeatureExtractor> siftExtractor = FeatureExtractor::create(
-	//			FeatureExtractor::SIFT);
-//	const Ptr<Feature2D> sift(new SIFT());
 
-//    const AffineAdaptedFeature2D asift(sift);
 	const AffineAdaptedFeature2D asift(siftDetector, siftExtractor);
-    asift(image, Mat(), keyPoints, descriptors);
+	asift(image, Mat(), keyPoints, descriptors, true);
 }
 
 }
