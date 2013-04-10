@@ -245,7 +245,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			detectAndComputeImpl(image, mask, _keypoints,
 					descriptors[paramsIndex]);
 
-			cout << "untilted keypoint is " << kp << endl;
+			cout << "untilted keypoint is " << kp.pt.x << " " << kp.pt.y << endl;
 		} else {
 			Mat transformedImage, transformedMask;
 			Mat Ainv = affineSkew(image, mask, tilt, phi, transformedImage,
@@ -266,7 +266,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 			const KeyPoint newKeyPoint(tx, ty, 0);
 			vector<KeyPoint> newKeyPoints = { newKeyPoint };
 
-			cout << "tilted keypoint is " << newKeyPoint << endl;
+			cout << "tilted keypoint is " << newKeyPoint.pt.x << " " << newKeyPoint.pt.y << endl;
 
 
 			detectAndComputeImpl(transformedImage, transformedMask,
