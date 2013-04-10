@@ -228,7 +228,7 @@ void detectAndExtractDescriptorsASIFT(const Mat& image,
 
 //    const AffineAdaptedFeature2D asift(sift);
 	const AffineAdaptedFeature2D asift(siftDetector, siftExtractor);
-    asift(image, NULL, keyPoints, descriptors);
+    asift(image, noArray, keyPoints, descriptors);
 }
 
 }
