@@ -297,7 +297,7 @@ void AffineAdaptedFeature2D::detectImpl(const Mat& /*image*/,
 }
 
 void detectAndExtractDescriptorsASIFT(const Mat& image,
-		KeyPoint& keyPoint, Mat& descriptors) {
+		const KeyPoint& keyPoint, Mat& descriptors) {
 
 	vector<KeyPoint> keyPoints = { keyPoint };
 
