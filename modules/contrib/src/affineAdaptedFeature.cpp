@@ -267,7 +267,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 
   vector<double> allDescriptorData;
   for (const Mat descriptor : descriptors) {
-	  if (!descriptor.empty) {
+	  if (!descriptor.empty()) {
 		  CV_Assert(descriptor.rows == 1);
 		  CV_Assert(descriptor.cols == 128);
 
