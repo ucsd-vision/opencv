@@ -233,7 +233,7 @@ void AffineAdaptedFeature2D::operator()(InputArray _image, InputArray _mask,
 	// Each Mat will be single-row.
 	vector<Mat> descriptors(affineTransformParams.size());
 
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (size_t paramsIndex = 0; paramsIndex < affineTransformParams.size();
 			paramsIndex++) {
 		const Vec2f& params = affineTransformParams[paramsIndex];
