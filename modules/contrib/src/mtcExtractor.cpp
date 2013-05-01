@@ -29,13 +29,13 @@ using boost::optional;
 /**
  * Normalize descriptor to have zero mean and unit norm.
  */
-Mat normalizeL2(const Mat& descriptor) {
+void normalizeL2(const Mat& descriptor, Mat& normalized, double& offset, double& scale) {
   Mat doubleDescriptor;
   descriptor.convertTo(doubleDescriptor, CV_64F);
 
-  const double offset = mean(doubleDescriptor).val[0];
-  const Mat centered = doubleDescriptor - offset;
-  const double scale = norm(centered);
+  offset = mean(doubleDescriptor).val[0];
+  cv::Mat centered = doubleDescriptor - offset;
+  scale = norm(centered);
   // If this fails, it probably means you're on a uniform patch.
   // We address this now by returning random noise; basically a guaranteed
   // failure, so hopefully this doesn't happen too often.
@@ -46,36 +46,24 @@ Mat normalizeL2(const Mat& descriptor) {
 //    return normalizeL2(noise);
 //  }
   CV_DbgAssert(scale > 0);
-  return centered / scale;
+  normalized = centered/scale;
 //
 //  const AffinePair affinePair = getAffinePair(descriptor);
 //  return (descriptor - affinePair.offset) / affinePair.scale;
 }
 
 
-
-/**
- * Find the affine pair that normalizes this matrix.
- */
-AffinePair getAffinePair(const Mat& descriptor) {
-  CV_DbgAssert(descriptor.type() == CV_8UC1);
-  CV_DbgAssert(descriptor.total() > 1);
-
-  Mat doubleDescriptor;
-  descriptor.convertTo(doubleDescriptor, CV_64F);
-
-  const double offset = mean(doubleDescriptor).val[0];
-  const double scale = norm(doubleDescriptor - offset);
-//  CV_DbgAssert(scale > 0);
-  return AffinePair(scale, offset);
-}
-
 /**
  * Get the normalization data for a matrix.
  */
 NormalizationData getNormalizationData(const Mat& descriptor) {
   CV_DbgAssert(descriptor.type() == CV_8UC1);
-  const AffinePair affinePair = getAffinePair(descriptor);
+
+  double offset, scale;
+  cv::Mat normalized;
+  normalizeL2(descriptor, normalized, offset, scale);
+
+  const AffinePair affinePair(scale, offset);
 
   // Check if we're dealing with a uniform patch.
   // If so, we give it an artificially high scale so it will fail to match
@@ -86,8 +74,8 @@ NormalizationData getNormalizationData(const Mat& descriptor) {
                              descriptor.total());
   }
 
-  return NormalizationData(getAffinePair(descriptor),
-                           sum(normalizeL2(descriptor)).val[0],
+  return NormalizationData(affinePair,
+                           sum(normalized).val[0],
                            descriptor.total());
 }
 
@@ -111,8 +99,6 @@ ScaleMapNormalizationData getScaleMap(const Mat& descriptor) {
     const Mat roi = descriptor(Range(start, stop), Range::all());
     CV_DbgAssert(roi.rows == stop - start);
     CV_DbgAssert(roi.cols == descriptor.cols);
-
-    getNormalizationData(roi);
 
     data[scaleOffset] = getNormalizationData(roi);;
   }
