@@ -30,16 +30,16 @@ vector<double> getScaleFactors(const double samplingRadius,
                                const int numScales) {
   const double maxScalingFactor = samplingRadius / minRadius;
   const double minScalingFactor = samplingRadius / maxRadius;
-  CV_Assert(maxScalingFactor > minScalingFactor);
+  CV_DbgAssert(maxScalingFactor > minScalingFactor);
   const double base = exp(
       log(minScalingFactor / maxScalingFactor) / (numScales - 1));
-  CV_Assert(base < 1);
+  CV_DbgAssert(base < 1);
 
   vector<double> scaleFactors;
   for (int scaleIndex = 0; scaleIndex < numScales; ++scaleIndex) {
     const double scaleFactor = maxScalingFactor * pow(base, scaleIndex);
-    CV_Assert(scaleFactor >= minScalingFactor - epsilon());
-    CV_Assert(scaleFactor <= maxScalingFactor + epsilon());
+    CV_DbgAssert(scaleFactor >= minScalingFactor - epsilon());
+    CV_DbgAssert(scaleFactor <= maxScalingFactor + epsilon());
     if (scaleIndex == 0)
       assertNear(scaleFactor, maxScalingFactor);
     if (scaleIndex == numScales - 1)
@@ -107,7 +107,7 @@ tuple<vector<double>, vector<tuple<double, double> >, vector<Mat> > scaleImage(
 
   const vector<tuple<tuple<int, int>, tuple<double, double> > > scaleSizesAndFactors =
       getRealScaleTargets(idealScaleFactors, blurred.cols, blurred.rows);
-  CV_Assert(idealScaleFactors.size() == scaleSizesAndFactors.size());
+  CV_DbgAssert(idealScaleFactors.size() == scaleSizesAndFactors.size());
 
   vector<tuple<double, double> > realScaleFactors;
   vector<Mat> scaledImages;
@@ -137,7 +137,7 @@ vector<Mat> scaleImagesOnly(const double samplingRadius, const double minRadius,
  * Sample a gray pixel from a color image with sub-pixel resolution.
  */
 int sampleSubPixelGray(const Mat& image, double x, double y) {
-  CV_Assert(image.channels() == 3);
+  CV_DbgAssert(image.channels() == 3);
 
   Mat pixelPatch;
   // This adjustement is necessary to match the behavior of my Scala reference
@@ -146,10 +146,10 @@ int sampleSubPixelGray(const Mat& image, double x, double y) {
   const float adjustedY = y - 0.5;
   getRectSubPix(image, Size(1, 1), Point2f(adjustedX, adjustedY), pixelPatch);
   Mat cloned = pixelPatch.clone();
-  CV_Assert(cloned.type() == CV_8UC3);
-  CV_Assert(cloned.rows == 1);
-  CV_Assert(cloned.cols == 1);
-  CV_Assert(cloned.channels() == 3);
+  CV_DbgAssert(cloned.type() == CV_8UC3);
+  CV_DbgAssert(cloned.rows == 1);
+  CV_DbgAssert(cloned.cols == 1);
+  CV_DbgAssert(cloned.channels() == 3);
   const int red = cloned.data[0];
   const int green = cloned.data[1];
   const int blue = cloned.data[2];
@@ -200,7 +200,7 @@ vector<Option<Mat> > rawLogPolarSeq(
                  image);
   const vector<tuple<double, double> >& realScaleFactors = get<1>(scaleData);
   const vector<Mat>& scaledImages = get<2>(scaleData);
-  CV_Assert(realScaleFactors.size() == numScales);
+  CV_DbgAssert(realScaleFactors.size() == numScales);
 
   vector<Option<Mat>> descriptors;
   for (vector<KeyPoint>::const_iterator keyPoint = keyPoints.begin();
@@ -240,7 +240,7 @@ vector<Option<Mat> > rawLogPolarSeq(
     descriptors.push_back(Some<Mat>(matrix));
   }
 }
-  CV_Assert(descriptors.size() == keyPoints.size());
+  CV_DbgAssert(descriptors.size() == keyPoints.size());
 
   return descriptors;
 }

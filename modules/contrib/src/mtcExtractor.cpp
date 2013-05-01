@@ -45,7 +45,7 @@ Mat normalizeL2(const Mat& descriptor) {
 //    randn(noise, 0, 1);
 //    return normalizeL2(noise);
 //  }
-  CV_Assert(scale > 0);
+  CV_DbgAssert(scale > 0);
   return centered / scale;
 //
 //  const AffinePair affinePair = getAffinePair(descriptor);
@@ -58,15 +58,15 @@ Mat normalizeL2(const Mat& descriptor) {
  * Find the affine pair that normalizes this matrix.
  */
 AffinePair getAffinePair(const Mat& descriptor) {
-  CV_Assert(descriptor.type() == CV_8UC1);
-  CV_Assert(descriptor.total() > 1);
+  CV_DbgAssert(descriptor.type() == CV_8UC1);
+  CV_DbgAssert(descriptor.total() > 1);
 
   Mat doubleDescriptor;
   descriptor.convertTo(doubleDescriptor, CV_64F);
 
   const double offset = mean(doubleDescriptor).val[0];
   const double scale = norm(doubleDescriptor - offset);
-//  CV_Assert(scale > 0);
+//  CV_DbgAssert(scale > 0);
   return AffinePair(scale, offset);
 }
 
@@ -74,7 +74,7 @@ AffinePair getAffinePair(const Mat& descriptor) {
  * Get the normalization data for a matrix.
  */
 NormalizationData getNormalizationData(const Mat& descriptor) {
-  CV_Assert(descriptor.type() == CV_8UC1);
+  CV_DbgAssert(descriptor.type() == CV_8UC1);
   const AffinePair affinePair = getAffinePair(descriptor);
 
   // Check if we're dealing with a uniform patch.
@@ -95,10 +95,10 @@ NormalizationData getNormalizationData(const Mat& descriptor) {
  * Get the scale map for an entire log-polar pattern.
  */
 ScaleMapNormalizationData getScaleMap(const Mat& descriptor) {
-  CV_Assert(descriptor.type() == CV_8UC1);
+  CV_DbgAssert(descriptor.type() == CV_8UC1);
 
-  CV_Assert(descriptor.rows > 0);
-  CV_Assert(descriptor.cols > 1);
+  CV_DbgAssert(descriptor.rows > 0);
+  CV_DbgAssert(descriptor.cols > 1);
 
   const int numScales = descriptor.rows;
 
@@ -109,8 +109,8 @@ ScaleMapNormalizationData getScaleMap(const Mat& descriptor) {
     const int stop = min(numScales, scaleOffset + numScales);
 
     const Mat roi = descriptor(Range(start, stop), Range::all());
-    CV_Assert(roi.rows == stop - start);
-    CV_Assert(roi.cols == descriptor.cols);
+    CV_DbgAssert(roi.rows == stop - start);
+    CV_DbgAssert(roi.cols == descriptor.cols);
 
     getNormalizationData(roi);
 
@@ -126,11 +126,11 @@ ScaleMapNormalizationData getScaleMap(const Mat& descriptor) {
  * Get a descriptor from an entire log-polar pattern.
  */
 NCCBlock getNCCBlock(const Mat& samples) {
-  CV_Assert(samples.type() == CV_8UC1);
+  CV_DbgAssert(samples.type() == CV_8UC1);
 
   // We require the descriptor width and height each be a power of two.
-  CV_Assert(isPowerOfTwo(samples.rows));
-  CV_Assert(samples.cols > 1 && isPowerOfTwo(samples.cols));
+  CV_DbgAssert(isPowerOfTwo(samples.rows));
+  CV_DbgAssert(samples.cols > 1 && isPowerOfTwo(samples.cols));
 
   const ScaleMapNormalizationData scaleMap = getScaleMap(samples);
 
@@ -157,21 +157,21 @@ VectorOptionNCCBlock extract(const NCCLogPolarExtractor& self, const Mat& image,
                                                             self.numAngles,
                                                             self.blurWidth,
                                                             image, keyPoints);
-  CV_Assert(sampleOptions.size() == keyPoints.size());
+  CV_DbgAssert(sampleOptions.size() == keyPoints.size());
 
   vector<Option<NCCBlock> > out;
   for (const auto& sampleOption : sampleOptions) {
     if (isDefined(sampleOption)) {
       const Mat sample = get(sampleOption);
-      CV_Assert(sample.rows == self.numScales);
-      CV_Assert(sample.cols == self.numAngles);
+      CV_DbgAssert(sample.rows == self.numScales);
+      CV_DbgAssert(sample.cols == self.numAngles);
       out.push_back(Some<NCCBlock>(getNCCBlock(sample)));
     } else {
       out.push_back(None<NCCBlock>());
     }
   }
 
-  CV_Assert(out.size() == keyPoints.size());
+  CV_DbgAssert(out.size() == keyPoints.size());
   return VectorOptionNCCBlock(out);
 }
 

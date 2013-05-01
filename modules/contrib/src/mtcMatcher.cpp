@@ -33,7 +33,7 @@ using boost::optional;
 double nccFromUnnormalized(const NormalizationData& leftData,
                            const NormalizationData& rightData,
                            const double unnormalizedInnerProduct) {
-  CV_Assert(leftData.size == rightData.size);
+  CV_DbgAssert(leftData.size == rightData.size);
 
   // Suppose we observe the inner product between two vectors
   // (a_x * x + b_x) and (a_y * y + b_y), where x and y are normalized.
@@ -53,12 +53,12 @@ double nccFromUnnormalized(const NormalizationData& leftData,
   const double numerator = unnormalizedInnerProduct - aybxy - axbyx - bxby;
   const double denominator = leftData.affinePair.scale
       * rightData.affinePair.scale;
-  CV_Assert(denominator != 0);
+  CV_DbgAssert(denominator != 0);
 
   const double correlation = numerator / denominator;
 //  cout << correlation << endl;
-  CV_Assert(correlation <= 1 + epsilon());
-  CV_Assert(correlation >= -1 - epsilon());
+  CV_DbgAssert(correlation <= 1 + epsilon());
+  CV_DbgAssert(correlation >= -1 - epsilon());
   return correlation;
 }
 
@@ -68,37 +68,24 @@ double nccFromUnnormalized(const NormalizationData& leftData,
  * into Fourier space.
  */
 Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
-  CV_Assert(left.type() == CV_64FC2);
-  CV_Assert(left.channels() == 2);
+  CV_DbgAssert(left.type() == CV_64FC2);
 
-  CV_Assert(left.rows == right.rows);
-  CV_Assert(left.cols == right.cols);
-  CV_Assert(left.channels() == right.channels());
-  CV_Assert(left.type() == right.type());
+  CV_DbgAssert(left.size() == right.size());
+  CV_DbgAssert(left.type() == right.type());
 
-  vector<Mat> leftLayers;
-  split(left, leftLayers);
-  CV_Assert(leftLayers.size() == 2);
-  const auto& leftReal = leftLayers.at(0);
-  const auto& leftImaginary = leftLayers.at(1);
-
-  vector<Mat> rightLayers;
-  split(right, rightLayers);
-  CV_Assert(rightLayers.size() == 2);
-  const auto& rightReal = rightLayers.at(0);
-  const auto& rightImaginary = rightLayers.at(1);
-
-  // Now we do pairwise multiplication of the _conjugate_ of the left
-  // matrix and the right matrix.
-  const auto realPart =
-      leftReal.mul(rightReal) + leftImaginary.mul(rightImaginary);
-  const auto imaginaryPart =
-      leftReal.mul(rightImaginary) - leftImaginary.mul(rightReal);
-
-  vector<Mat> dotTimesLayers = {realPart, imaginaryPart};
-  Mat dotTimes;
-  merge(dotTimesLayers, dotTimes);
-
+  Mat_<cv::Vec2d> dotTimes(left.size());
+ 
+  double* p_left = reinterpret_cast<double*>(left.data), *p_right = reinterpret_cast<double*>(right.data);
+  double* p_res = reinterpret_cast<double*>(dotTimes.data), *p_end = p_res + 2*left.cols*left.rows;
+  for(; p_res != p_end;) {
+    const double & a = *p_left++;
+    const double & b = *p_left++;
+    const double & c = *p_right++;
+    const double & d = *p_right++;
+    *p_res++ = a*c + b*d;
+    *p_res++ = a*d - b*c;
+  }
+    
   return ifft2DDouble(dotTimes);
 }
 
@@ -107,11 +94,11 @@ Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
  */
 Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
                    const NCCBlock& rightBlock) {
-  CV_Assert(leftBlock.fourierData.rows == rightBlock.fourierData.rows);
-  CV_Assert(leftBlock.fourierData.cols == rightBlock.fourierData.cols);
+  CV_DbgAssert(leftBlock.fourierData.rows == rightBlock.fourierData.rows);
+  CV_DbgAssert(leftBlock.fourierData.cols == rightBlock.fourierData.cols);
   // The data has been zero padded in the vertical direction, which is
   // why we're dividing by 2 here.
-  CV_Assert(scaleSearchRadius < leftBlock.fourierData.rows / 2);
+  CV_DbgAssert(scaleSearchRadius < leftBlock.fourierData.rows / 2);
 
 //  cout << leftBlock.fourierData.rows << endl;
 //  cout << leftBlock.fourierData.cols << endl;
@@ -120,7 +107,7 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
   // This is real valued.
   const Mat correlation = correlationFromPreprocessed(rightBlock.fourierData,
                                                       leftBlock.fourierData);
-  CV_Assert(correlation.type() == CV_64FC1);
+  CV_DbgAssert(correlation.type() == CV_64FC1);
 
 //  cout << correlation << endl;
 
@@ -137,17 +124,17 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
 //    }
 //  }
 
-  Mat normalized(2 * scaleSearchRadius + 1, correlation.cols, correlation.type());
+  Mat_<double> normalized(2 * scaleSearchRadius + 1, correlation.cols);
+  double * p_normalized = normalized.ptr<double>(0);
   for (int scaleOffset = -scaleSearchRadius; scaleOffset <= scaleSearchRadius;
       ++scaleOffset) {
     const int correlationRowIndex = mod(scaleOffset, leftBlock.fourierData.rows);
-    for (int col = 0; col < correlation.cols; ++col) {
-      const double dotProduct = correlation.at<double>(correlationRowIndex, col);
+    const double * p_correlation = correlation.ptr<double>(correlationRowIndex), *p_correlation_end = p_correlation+correlation.cols;
+    for (; p_correlation != p_correlation_end;) {
       const double normalizedValue = nccFromUnnormalized(
           leftBlock.scaleMap.get(scaleOffset),
-          rightBlock.scaleMap.get(-scaleOffset), dotProduct);
-      const int normalizedRowIndex = scaleOffset + scaleSearchRadius;
-      normalized.at<double>(normalizedRowIndex, col) = normalizedValue;
+          rightBlock.scaleMap.get(-scaleOffset), *p_correlation++);
+      *p_normalized++ = normalizedValue;
     }
   }
 
@@ -158,13 +145,13 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
  * The map of distances.
  */
 Mat responseMapToDistanceMap(const Mat& responseMap) {
-  CV_Assert(responseMap.type() == CV_64FC1);
+  CV_DbgAssert(responseMap.type() == CV_64FC1);
 
-  Mat distances(responseMap.size(), responseMap.type());
+  Mat_<double> distances(responseMap.size());
 
-  MatConstIterator_<double> response = responseMap.begin<double>();
-  MatIterator_<double> distance = distances.begin<double>();
-  for (; response != responseMap.end<double>(); ++response, ++distance) {
+  const double * response = responseMap.ptr<double>(0), *response_end = response + responseMap.total();
+  double * distance = distances.ptr<double>(0);
+  for (; response != response_end; ++response, ++distance) {
     *distance = dotProductToL2Distance(*response);
   }
   return distances;
@@ -214,7 +201,7 @@ Mat matchAllPairs(const NCCLogPolarMatcher& matcher, const VectorNCCBlock& lefts
 
   Mat distances(lefts.size(), rights.size(), CV_64FC1, Scalar(-1));
 
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (int row = 0; row < distances.rows; ++row) {
 
     for (int col = 0; col < distances.cols; ++col) {
