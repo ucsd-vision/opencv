@@ -36,7 +36,6 @@ void assertNear(const double left, const double right) {
 
 Mat fft2DDouble(const Mat& spatialData) {
   CV_Assert(spatialData.type() == CV_64FC1);
-  CV_Assert(spatialData.channels() == 1);
 
   Mat fourierData;
   dft(spatialData, fourierData, DFT_COMPLEX_OUTPUT, 0);
@@ -45,7 +44,6 @@ Mat fft2DDouble(const Mat& spatialData) {
 
 Mat ifft2DDouble(const Mat& fourierData) {
   CV_Assert(fourierData.type() == CV_64FC2);
-  CV_Assert(fourierData.channels() == 2);
 
   Mat spatialData;
   idft(fourierData, spatialData, DFT_REAL_OUTPUT | DFT_SCALE, 0);
@@ -58,7 +56,7 @@ Mat ifft2DDouble(const Mat& fourierData) {
  * Divides by sqrt(2) to undo a previous normalization.
  */
 double dotProductToL2Distance(const double dotProduct) {
-  return sqrt(2 - 2 * dotProduct) / sqrt(2);
+  return sqrt(1 - dotProduct);
 }
 
 }
