@@ -81,8 +81,8 @@ struct CV_EXPORTS_W NormalizationData {
 //  vector<A> privateData;
 //
 //  const A& get(int index) const {
-//    CV_Assert(index >= -radius);
-//    CV_Assert(index <= radius);
+//    CV_DbgAssert(index >= -radius);
+//    CV_DbgAssert(index <= radius);
 //
 //    return privateData.at(index + radius);
 //  }
@@ -105,9 +105,9 @@ struct CV_EXPORTS_W NormalizationData {
 //    const int minKey = keys.at(0);
 //    const int maxKey = keys.at(keys.size() - 1);
 //
-//    CV_Assert(-minKey == maxKey);
+//    CV_DbgAssert(-minKey == maxKey);
 //    for (int index = 0; index < keys.size(); ++index) {
-//      CV_Assert(keys.at(index) == index + minKey);
+//      CV_DbgAssert(keys.at(index) == index + minKey);
 //    }
 //  }
 //};
@@ -125,15 +125,15 @@ struct CV_EXPORTS_W ScaleMapNormalizationData {
   CV_WRAP int getRadius() const { return radius; }
 
   CV_WRAP const NormalizationData& get(int index) const {
-    CV_Assert(index >= -radius);
-    CV_Assert(index <= radius);
+    CV_DbgAssert(index >= -radius);
+    CV_DbgAssert(index <= radius);
 
     return privateData.at(index + radius);
   }
 
   NormalizationData& get(int index) {
-    CV_Assert(index >= -radius);
-    CV_Assert(index <= radius);
+    CV_DbgAssert(index >= -radius);
+    CV_DbgAssert(index <= radius);
 
     return privateData.at(index + radius);
   }
@@ -158,9 +158,9 @@ struct CV_EXPORTS_W ScaleMapNormalizationData {
     const int minKey = keys.at(0);
     const int maxKey = keys.at(keys.size() - 1);
 
-    CV_Assert(-minKey == maxKey);
+    CV_DbgAssert(-minKey == maxKey);
     for (int index = 0; index < keys.size(); ++index) {
-      CV_Assert(keys.at(index) == index + minKey);
+      CV_DbgAssert(keys.at(index) == index + minKey);
     }
   }
 };
@@ -183,7 +183,7 @@ struct CV_EXPORTS_W NCCBlock {
            const ScaleMapNormalizationData& scaleMap_)
       : fourierData(fourierData_),
         scaleMap(scaleMap_) {
-    CV_Assert(fourierData.rows - 1 == 2 * scaleMap.radius + 1);
+    CV_DbgAssert(fourierData.rows - 1 == 2 * scaleMap.radius + 1);
   }
 };
 
@@ -220,8 +220,8 @@ struct CV_EXPORTS_W NCCLogPolarExtractor {
         numScales(numScales_),
         numAngles(numAngles_),
         blurWidth(blurWidth_) {
-    CV_Assert(isPowerOfTwo(numScales));
-    CV_Assert(numAngles > 1 && isPowerOfTwo(numAngles));
+    CV_DbgAssert(isPowerOfTwo(numScales));
+    CV_DbgAssert(numAngles > 1 && isPowerOfTwo(numAngles));
   }
 };
 

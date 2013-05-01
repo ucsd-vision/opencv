@@ -36,7 +36,7 @@ struct CV_EXPORTS_W NCCLogPolarMatcher {
 
   CV_WRAP NCCLogPolarMatcher(const int scaleSearchRadius_)
       : scaleSearchRadius(scaleSearchRadius_) {
-    CV_Assert(scaleSearchRadius >= 0);
+    CV_DbgAssert(scaleSearchRadius >= 0);
   }
 };
 
@@ -44,18 +44,8 @@ CV_WRAP double nccFromUnnormalized(const NormalizationData& leftData,
                            const NormalizationData& rightData,
                            const double unnormalizedInnerProduct);
 
-CV_WRAP Mat correlationFromPreprocessed(const Mat& left, const Mat& right);
-
-CV_WRAP Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
-                   const NCCBlock& rightBlock);
-
-CV_WRAP Mat responseMapToDistanceMap(const Mat& responseMap);
-
 CV_WRAP Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
                    const NCCBlock& right);
-
-CV_WRAP double distance(const NCCLogPolarMatcher& self, const NCCBlock& left,
-                        const NCCBlock& right);
 
 /**
  * Wrapper generator workaround.

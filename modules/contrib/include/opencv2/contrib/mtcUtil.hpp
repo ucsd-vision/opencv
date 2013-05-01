@@ -45,13 +45,13 @@ template<typename A>
 bool isDefined(const Option<A>& option) {
   // The empty list is the empty option, and the list with one element
   // is the defined option.
-  CV_Assert(option.size() == 0 || option.size() == 1);
+  CV_DbgAssert(option.size() == 0 || option.size() == 1);
   return option.size() == 1;
 }
 
 template<typename A>
 const A& get(const Option<A>& option) {
-  CV_Assert(isDefined(option));
+  CV_DbgAssert(isDefined(option));
   return option.at(0);
 }
 
@@ -68,12 +68,9 @@ double epsilon();
 
 void assertNear(const double left, const double right);
 
-CV_EXPORTS_W Mat fft2DDouble(const Mat& spatialData);
+CV_EXPORTS_W void fft2D(const Mat& spatialData, Mat & fourierData);
 
-CV_EXPORTS_W Mat ifft2DDouble(const Mat& fourierData);
-
-CV_EXPORTS_W double dotProductToL2Distance(const double dotProduct);
-
+CV_EXPORTS_W void ifft2D(const Mat& fourierData, Mat & spatialData);
 }
 
 #endif

@@ -31,32 +31,19 @@ int mod(const int a, const int b) {
 double epsilon() { return 0.00001; }
 
 void assertNear(const double left, const double right) {
-  CV_Assert(std::abs(left - right) < epsilon());
+  CV_DbgAssert(std::abs(left - right) < epsilon());
 }
 
-Mat fft2DDouble(const Mat& spatialData) {
-  CV_Assert(spatialData.type() == CV_64FC1);
+void fft2D(const Mat& spatialData, cv::Mat &fourierData) {
+  CV_DbgAssert(spatialData.type() == CV_32FC1 || spatialData.type() == CV_64FC1);
 
-  Mat fourierData;
   dft(spatialData, fourierData, DFT_COMPLEX_OUTPUT, 0);
-  return fourierData;
 }
 
-Mat ifft2DDouble(const Mat& fourierData) {
-  CV_Assert(fourierData.type() == CV_64FC2);
+void ifft2D(const Mat& fourierData, cv::Mat &spatialData) {
+  CV_DbgAssert(fourierData.type() == CV_32FC2 || fourierData.type() == CV_64FC2);
 
-  Mat spatialData;
   idft(fourierData, spatialData, DFT_REAL_OUTPUT | DFT_SCALE, 0);
-  return spatialData;
-}
-
-/**
- * Assuming the dot product is between two unit length vectors, find
- * their l2 distance.
- * Divides by sqrt(2) to undo a previous normalization.
- */
-double dotProductToL2Distance(const double dotProduct) {
-  return sqrt(1 - dotProduct);
 }
 
 }

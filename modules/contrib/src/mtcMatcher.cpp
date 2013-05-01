@@ -27,12 +27,23 @@ using namespace std;
 using boost::optional;
 
 /**
+ * Assuming the dot product is between two unit length vectors, find
+ * their l2 distance.
+ * Divides by sqrt(2) to undo a previous normalization.
+ */
+template<typename T>
+T dotProductToL2Distance(const T dotProduct) {
+  return sqrt(1 - dotProduct);
+}
+
+/**
  * Determine what the dot product would have been had the vectors been
  * normalized first.
  */
-double nccFromUnnormalized(const NormalizationData& leftData,
+template<typename T>
+T nccFromUnnormalized(const NormalizationData& leftData,
                            const NormalizationData& rightData,
-                           const double unnormalizedInnerProduct) {
+                           const T unnormalizedInnerProduct) {
   CV_DbgAssert(leftData.size == rightData.size);
 
   // Suppose we observe the inner product between two vectors
@@ -41,21 +52,21 @@ double nccFromUnnormalized(const NormalizationData& leftData,
   // (a_x * x)^T (a_y * y) + a_y * b_x^T y + a_x * b_y^T x + b_x^T b_y.
   // Thus we can solve for the normalized dot product:
   // x^T y = ((a_x * x)^T (a_y * y) - a_y * b_x^T y - a_x * b_y^T x - b_x^T b_y) / (a_x * a_y).
-  const double aybxy = rightData.affinePair.scale * leftData.affinePair.offset
+  const T aybxy = rightData.affinePair.scale * leftData.affinePair.offset
       * rightData.elementSum;
 
-  const double axbyx = leftData.affinePair.scale * rightData.affinePair.offset
+  const T axbyx = leftData.affinePair.scale * rightData.affinePair.offset
       * leftData.elementSum;
 
-  const double bxby = leftData.size * leftData.affinePair.offset
+  const T bxby = leftData.size * leftData.affinePair.offset
       * rightData.affinePair.offset;
 
-  const double numerator = unnormalizedInnerProduct - aybxy - axbyx - bxby;
-  const double denominator = leftData.affinePair.scale
+  const T numerator = unnormalizedInnerProduct - aybxy - axbyx - bxby;
+  const T denominator = leftData.affinePair.scale
       * rightData.affinePair.scale;
   CV_DbgAssert(denominator != 0);
 
-  const double correlation = numerator / denominator;
+  const T correlation = numerator / denominator;
 //  cout << correlation << endl;
   CV_DbgAssert(correlation <= 1 + epsilon());
   CV_DbgAssert(correlation >= -1 - epsilon());
@@ -67,16 +78,17 @@ double nccFromUnnormalized(const NormalizationData& leftData,
  * they were originally purely real and the have already been mapped
  * into Fourier space.
  */
-Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
+template<typename T>
+void correlationFromPreprocessed(const Mat& left, const Mat& right, Mat_<T>& correlation) {
   CV_DbgAssert(left.type() == CV_64FC2);
 
   CV_DbgAssert(left.size() == right.size());
   CV_DbgAssert(left.type() == right.type());
 
-  Mat_<cv::Vec2d> dotTimes(left.size());
+  Mat_<cv::Vec<T,2> > dotTimes(left.size());
  
-  double* p_left = reinterpret_cast<double*>(left.data), *p_right = reinterpret_cast<double*>(right.data);
-  double* p_res = reinterpret_cast<double*>(dotTimes.data), *p_end = p_res + 2*left.cols*left.rows;
+  const double* p_left = left.ptr<double>(0), *p_right = right.ptr<double>(0);
+  T* p_res = dotTimes.template ptr<T>(0), *p_end = p_res + 2*left.cols*left.rows;
   for(; p_res != p_end;) {
     const double & a = *p_left++;
     const double & b = *p_left++;
@@ -85,14 +97,15 @@ Mat correlationFromPreprocessed(const Mat& left, const Mat& right) {
     *p_res++ = a*c + b*d;
     *p_res++ = a*d - b*c;
   }
-    
-  return ifft2DDouble(dotTimes);
+
+  ifft2D(dotTimes, correlation);
 }
 
 /**
  * The map of normalized correlations.
  */
-Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
+template<typename T>
+T getResponseMapMax(const int scaleSearchRadius, const NCCBlock& leftBlock,
                    const NCCBlock& rightBlock) {
   CV_DbgAssert(leftBlock.fourierData.rows == rightBlock.fourierData.rows);
   CV_DbgAssert(leftBlock.fourierData.cols == rightBlock.fourierData.cols);
@@ -105,8 +118,8 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
 //  cout << leftBlock.fourierData.channels() << endl;
 
   // This is real valued.
-  const Mat correlation = correlationFromPreprocessed(rightBlock.fourierData,
-                                                      leftBlock.fourierData);
+  Mat_<T> correlation;
+  correlationFromPreprocessed(rightBlock.fourierData, leftBlock.fourierData, correlation);
   CV_DbgAssert(correlation.type() == CV_64FC1);
 
 //  cout << correlation << endl;
@@ -124,52 +137,29 @@ Mat getResponseMap(const int scaleSearchRadius, const NCCBlock& leftBlock,
 //    }
 //  }
 
-  Mat_<double> normalized(2 * scaleSearchRadius + 1, correlation.cols);
-  double * p_normalized = normalized.ptr<double>(0);
+  T maxi = std::numeric_limits<T>::min();
+
   for (int scaleOffset = -scaleSearchRadius; scaleOffset <= scaleSearchRadius;
       ++scaleOffset) {
     const int correlationRowIndex = mod(scaleOffset, leftBlock.fourierData.rows);
-    const double * p_correlation = correlation.ptr<double>(correlationRowIndex), *p_correlation_end = p_correlation+correlation.cols;
+    const T * p_correlation = correlation.template ptr<T>(correlationRowIndex), *p_correlation_end = p_correlation+correlation.cols;
     for (; p_correlation != p_correlation_end;) {
-      const double normalizedValue = nccFromUnnormalized(
+      maxi = std::max(maxi, nccFromUnnormalized<T>(
           leftBlock.scaleMap.get(scaleOffset),
-          rightBlock.scaleMap.get(-scaleOffset), *p_correlation++);
-      *p_normalized++ = normalizedValue;
+          rightBlock.scaleMap.get(-scaleOffset), *p_correlation++));
     }
   }
 
-  return normalized;
-}
-
-/**
- * The map of distances.
- */
-Mat responseMapToDistanceMap(const Mat& responseMap) {
-  CV_DbgAssert(responseMap.type() == CV_64FC1);
-
-  Mat_<double> distances(responseMap.size());
-
-  const double * response = responseMap.ptr<double>(0), *response_end = response + responseMap.total();
-  double * distance = distances.ptr<double>(0);
-  for (; response != response_end; ++response, ++distance) {
-    *distance = dotProductToL2Distance(*response);
-  }
-  return distances;
-}
-
-Mat getDistanceMap(const NCCLogPolarMatcher& self, const NCCBlock& left,
-                   const NCCBlock& right) {
-  const Mat responseMap = getResponseMap(self.scaleSearchRadius, left, right);
-  return responseMapToDistanceMap(responseMap);
+  return maxi;
 }
 
 /**
  * The distance between two descriptors.
  */
-double distance(const NCCLogPolarMatcher& self, const NCCBlock& left,
+template<typename T>
+T distance(const NCCLogPolarMatcher& self, const NCCBlock& left,
                         const NCCBlock& right) {
-  const Mat distanceMap = getDistanceMap(self, left, right);
-  return *min_element(distanceMap.begin<double>(), distanceMap.end<double>());
+  return dotProductToL2Distance<T>(getResponseMapMax<T>(self.scaleSearchRadius, left, right));
 }
 
 //double distance(const int scaleSearchRadius, const Mat& leftBlock,
@@ -199,17 +189,17 @@ Mat matchAllPairs(const NCCLogPolarMatcher& matcher, const VectorNCCBlock& lefts
   const auto lefts = lefts_.data;
   const auto rights = rights_.data;
 
-  Mat distances(lefts.size(), rights.size(), CV_64FC1, Scalar(-1));
+  Mat_<float> distances(lefts.size(), rights.size());
+  float* p_distances = distances.ptr<float>(0);
 
   //#pragma omp parallel for
   for (int row = 0; row < distances.rows; ++row) {
 
-    for (int col = 0; col < distances.cols; ++col) {
+    for (int col = 0; col < distances.cols; ++col, ++p_distances) {
       const NCCBlock& left = lefts.at(row);
       const NCCBlock& right = rights.at(col);
 
-      distances.at<double>(row, col) = distance(matcher, left,
-                                                          right);
+      *p_distances = distance<float>(matcher, left, right);
     }
   }
   return distances;
