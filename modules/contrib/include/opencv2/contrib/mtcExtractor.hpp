@@ -54,7 +54,6 @@ struct CV_EXPORTS_W NormalizationData {
   CV_WRAP double elementSum;
   CV_WRAP int size;
 
-  CV_WRAP AffinePair getAffinePair() const { return affinePair; }
   CV_WRAP double getElementSum() const { return elementSum; }
   CV_WRAP int getSize() const { return size; }
 
@@ -224,8 +223,6 @@ struct CV_EXPORTS_W NCCLogPolarExtractor {
     CV_DbgAssert(numAngles > 1 && isPowerOfTwo(numAngles));
   }
 };
-
-CV_EXPORTS_W AffinePair getAffinePair(const Mat& descriptor);
 
 CV_EXPORTS_W NormalizationData getNormalizationData(const Mat& descriptor);
 
