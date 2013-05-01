@@ -5,53 +5,38 @@ using namespace cv;
 using namespace std;
 
 TEST(Contrib_MTC, CrashTest) {
-  cout << "here" << endl;
+  const auto image = imread("/wg/u/echristiansen/Dropbox/goldfish_girl.bmp");
+  ASSERT_FALSE(image.empty());
 
-  Mat samples(32, 32, CV_8U);
-  RNG().fill(samples, RNG::UNIFORM, NULL, NULL);
+  // You should detect a bunch of keypoints here.
+  const KeyPoint keyPoint(50, 50, 0);
+  const vector<KeyPoint> keyPoints { keyPoint };
 
-//  cout << samples << endl;
+  // These functions defined in mtcExtractor.* and mtcMatcher.*
 
-  getScaleMap(samples);
+  // Log-polar grid params and blur.
+  const double minRadius = 4;
+  const double maxRadius = 32;
+  const int numScales = 8;
+  const int numAngles = 16;
+  const double blurWidth = 1.2;
+  const auto extractor = NCCLogPolarExtractor(
+		  minRadius, maxRadius, numScales, numAngles, blurWidth);
 
-  getNCCBlock(samples);
+  // These are optional values. Basically either a descriptor or null.
+  // Used to model the fact not all keypoints can become descriptors.
+  const VectorOptionNCCBlock descriptorOptions = extract(extractor,
+          image,
+          keyPoints);
 
-//
-//  const auto image = imread("/wg/u/echristiansen/Dropbox/goldfish_girl.bmp");
-//  ASSERT_FALSE(image.empty());
-//
-//  const KeyPoint keyPoint(50, 50, 0);
-//  const vector<KeyPoint> keyPoints { keyPoint };
-//
-//  const auto sampleOptions = rawLogPolarSeq(2, 32, 8, 16, 2, image, keyPoints);
-//  ASSERT_TRUE(sampleOptions.at(0).rows > 0);
-//  const auto sample = sampleOptions.at(0);
-//
-////  cout << sample << endl;
-//
-//  const auto nData = getNormalizationData(sample);
-//
-//  const auto scaleMap = getScaleMap(sample);
-//
-//  const auto nccBlock = getNCCBlock(sample);
-//
-////  cout << nccBlock.fourierData << endl;
-//
-//  const auto extractor = NCCLogPolarExtractor(2, 32, 2, 4, 2);
-//
-//  const vector<optional<NCCBlock>> descriptors = extractInternal(extractor,
-//                                                                 image,
-//                                                                 keyPoints);
-//
-//  const NCCBlock descriptor = descriptors.at(0).get();
-//
-//  const auto matcher = NCCLogPolarMatcher(2);
-//
-//  const auto distanceMap = getResponseMap(
-//      0, descriptor, descriptor);
-//
-////  const auto d = distanceInternal(
-////      matcher, descriptor, descriptor);
-////
-////  cout << d << endl;
+  // This unboxes the descriptors, and throws away the nulls.
+  const VectorNCCBlock descriptors = flatten(descriptorOptions);
+
+  // Controls the amount of overlap in the cylinder alignment process.
+  const int scaleSearchRadius = 4;
+  const auto matcher = NCCLogPolarMatcher(scaleSearchRadius);
+
+  // This matches the descriptors to themselves.
+  // Distances is a distance matrix.
+  const Mat distances = matchAllPairs(matcher, descriptors, descriptors);
 }
