@@ -141,7 +141,8 @@ NCCBlock getNCCBlock(const Mat& samples) {
   // For now, we're working with floating point values.
   Mat converted;
   padded.convertTo(converted, CV_64FC1);
-  const Mat fourierData = fft2DDouble(converted);
+  Mat fourierData;
+  fft2D(converted, fourierData);
 
   return NCCBlock(fourierData, scaleMap);
 }
